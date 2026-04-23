@@ -51,27 +51,6 @@ class Operations:
         return re.sub(r"\s?\-\-\s?", " ", string)
 
 
-def statistics(articles: list[Post]):
-    mean_title, max_title, min_title = (
-        average(articles, lambda a: len(a.post)),
-        len(max(articles, key=lambda a: len(a.post)).post),
-        len(min(articles, key=lambda a: len(a.post)).post),
-    )
-    mean_text, max_text, min_text = (
-        average(articles, lambda a: len(a.tags)),
-        len(max(articles, key=lambda a: len(a.tags)).tags),
-        len(min(articles, key=lambda a: len(a.tags)).tags),
-    )
-
-    print(mean_title)
-    print(mean_text)
-
-    print(max_title)
-    print(min_title)
-    print(max_text)
-    print(min_text)
-
-
 if __name__ == "__main__":
     posts = load_dataset()
 

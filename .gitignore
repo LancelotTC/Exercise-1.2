@@ -1,8 +1,12 @@
 /data
 /venv
+/__pycache__
+/statistics
 
-.history
+
 tempCodeRunnerFile.*
 *.pyc
-results.json
+
+.history
 .DS_Store
+results.json
