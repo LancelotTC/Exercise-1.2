@@ -52,7 +52,7 @@ class Operations:
 
         nltk.download("stopwords", download_dir="data", quiet=True)
 
-        STOP_WORDS = frozenset(DATA_FOLDER / Path(r"corpora\stopwords\french").read_text().split("\n"))
+        STOP_WORDS = frozenset((DATA_FOLDER / "corpora/stopwords/french").read_text().split("\n"))
 
         for word in STOP_WORDS:
             string = re.sub(rf"(?<=\W)({word}|{word.upper()}|{word.capitalize()})(?=\W)", "", string)
