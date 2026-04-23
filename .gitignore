@@ -1,4 +1,5 @@
-*.csv
+/data
 /venv
+
 .history
 tempCodeRunnerFile.*

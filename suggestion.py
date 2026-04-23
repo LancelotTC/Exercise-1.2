@@ -7,6 +7,9 @@ from collections.abc import Callable, Iterable
 import pandas as pd
 
 
+DATA_FOLDER = Path("data/")
+
+
 @attrs.define
 class Post:
     post: str = ""
@@ -47,11 +50,9 @@ class Operations:
     def remove_stop_words(string: str):
         import nltk
 
-        nltk.download("stopwords", quiet=True)
+        nltk.download("stopwords", download_dir="data", quiet=True)
 
-        STOP_WORDS = frozenset(
-            Path(r"C:\Users\lance\AppData\Roaming\nltk_data\corpora\stopwords\french").read_text().split("\n")
-        )
+        STOP_WORDS = frozenset(DATA_FOLDER / Path(r"corpora\stopwords\french").read_text().split("\n"))
 
         for word in STOP_WORDS:
             string = re.sub(rf"(?<=\W)({word}|{word.upper()}|{word.capitalize()})(?=\W)", "", string)
@@ -114,7 +115,7 @@ def statistics(articles: list[Post]):
 
 
 if __name__ == "__main__":
-    DATA_FILE = "data/stack-overflow-data.csv"
+    DATA_FILE = DATA_FOLDER / "stack-overflow-data.csv"
 
     df = pd.read_csv(DATA_FILE)
 
