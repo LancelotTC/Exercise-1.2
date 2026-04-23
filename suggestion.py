@@ -93,8 +93,6 @@ def average(numbers: Iterable[int | float], key: Optional[Callable] = lambda x: 
 
 
 def statistics(articles: list[Post]):
-    # [attrs.asdict(article) for article in articles],
-
     mean_title, max_title, min_title = (
         average(articles, lambda a: len(a.post)),
         len(max(articles, key=lambda a: len(a.post)).post),
