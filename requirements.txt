@@ -6,3 +6,4 @@ spacy
 unidecode
 pandas
 nltk
+matplotlib

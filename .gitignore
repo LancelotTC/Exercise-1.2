@@ -4,3 +4,5 @@
 .history
 tempCodeRunnerFile.*
 *.pyc
+results.json
+.DS_Store

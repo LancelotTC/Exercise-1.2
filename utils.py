@@ -15,9 +15,6 @@ class Post:
         self.post = func(self.post)
         self.tags = func(self.tags)
 
-    def remove_words(self, word: str):
-        self.apply(partial(str.replace, old=word, new=""))
-
 
 def average(numbers: Iterable[int | float], key: Optional[Callable] = lambda x: x) -> int | float:
     """Returns average of all numerical values in a one-dimensional Iterable or Mapping-like object"""
