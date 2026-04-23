@@ -1,12 +1,10 @@
-import pandas as pd
+import spacy
 from tqdm import tqdm
 import re, json, attrs
-from pathlib import Path
-from typing import Optional
-from functools import partial
-from collections.abc import Callable, Iterable
-from utils import average, load_dataset, Post
 from constants import *
+from utils import average, load_dataset, Post
+from unidecode import unidecode as no_accents
+from nltk.stem.snowball import SnowballStemmer
 
 
 class Operations:
@@ -21,27 +19,13 @@ class Operations:
         return re.sub(r"\s{2,}", " ", string)
 
     @staticmethod
-    def digits_to_spelled(string: str):
-        from num2words import num2words
-
-        return num2words(string)
-
-    @staticmethod
-    def spelled_to_digit(string: str):
-        from word2number import w2n
-
-        return w2n.word_to_num(string)
-
-    @staticmethod
     def remove_stop_words(string: str):
-        import nltk
-
-        nltk.download("stopwords", download_dir="data", quiet=True)
 
         STOP_WORDS = frozenset((DATA_FOLDER / "corpora/stopwords/french").read_text().split("\n"))
 
         for word in STOP_WORDS:
-            string = re.sub(rf"(?<=\W)({word}|{word.upper()}|{word.capitalize()})(?=\W)", "", string)
+            # string = re.sub(rf"(?<=\W)({word}|{word.upper()}|{word.capitalize()})(?=\W)", "", string)
+            string = string.replace(word, "").replace(word.upper(), "").replace(word.capitalize(), "")
 
         return string
 
@@ -51,15 +35,12 @@ class Operations:
 
     @staticmethod
     def stem(string: str):
-        from nltk.stem.snowball import SnowballStemmer
 
         stemmer = SnowballStemmer("french")
         return " ".join(stemmer.stem(word) for word in string.split(" "))
 
     @staticmethod
     def lemmatize(string: str):
-        import spacy
-        from unidecode import unidecode as no_accents
 
         lemmatizer = spacy.load("fr_core_news_md")
 
@@ -68,15 +49,6 @@ class Operations:
     @staticmethod
     def remove_double_dash(string: str):
         return re.sub(r"\s?\-\-\s?", " ", string)
-
-
-def average(numbers: Iterable[int | float], key: Optional[Callable] = lambda x: x) -> int | float:
-    """Returns average of all numerical values in a one-dimensional Iterable or Mapping-like object"""
-
-    if not isinstance(numbers, Iterable) or isinstance(numbers, str):
-        raise TypeError(f"Expected object of type Iterable, got {type(numbers).__name__}")
-
-    return sum((key(n) for n in numbers)) / len(numbers)
 
 
 def statistics(articles: list[Post]):
@@ -111,9 +83,6 @@ if __name__ == "__main__":
 
         post.apply(Operations.remove_duplicate_whitespace)
         post.apply(Operations.remove_apostrophes)
-
-        # article.apply_transformation(Operations.remove_duplicate_whitespace)
-        # article.apply_transformation(Operations.lemmatize)
 
         post.apply(Operations.remove_duplicate_whitespace)
         post.apply(Operations.remove_double_dash)
