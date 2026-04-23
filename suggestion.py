@@ -4,17 +4,17 @@ from pathlib import Path
 from typing import Optional
 from functools import partial
 from collections.abc import Callable, Iterable
+import pandas as pd
 
 
 @attrs.define
-class Article:
-    title: str = ""
-    text: str = ""
-    url: str = ""
+class Post:
+    post: str = ""
+    tags: str = ""
 
     def apply(self, func: Callable[[str], str]):
-        self.title = func(self.title)
-        self.text = func(self.text)
+        self.post = func(self.post)
+        self.tags = func(self.tags)
 
     def remove_words(self, word: str):
         self.apply(partial(str.replace, old=word, new=""))
@@ -92,18 +92,18 @@ def average(numbers: Iterable[int | float], key: Optional[Callable] = lambda x: 
     return sum((key(n) for n in numbers)) / len(numbers)
 
 
-def statistics(articles: list[Article]):
+def statistics(articles: list[Post]):
     # [attrs.asdict(article) for article in articles],
 
     mean_title, max_title, min_title = (
-        average(articles, lambda a: len(a.title)),
-        len(max(articles, key=lambda a: len(a.title)).title),
-        len(min(articles, key=lambda a: len(a.title)).title),
+        average(articles, lambda a: len(a.post)),
+        len(max(articles, key=lambda a: len(a.post)).post),
+        len(min(articles, key=lambda a: len(a.post)).post),
     )
     mean_text, max_text, min_text = (
-        average(articles, lambda a: len(a.text)),
-        len(max(articles, key=lambda a: len(a.text)).text),
-        len(min(articles, key=lambda a: len(a.text)).text),
+        average(articles, lambda a: len(a.tags)),
+        len(max(articles, key=lambda a: len(a.tags)).tags),
+        len(min(articles, key=lambda a: len(a.tags)).tags),
     )
 
     print(mean_title)
@@ -116,34 +116,33 @@ def statistics(articles: list[Article]):
 
 
 if __name__ == "__main__":
-    DATA_FILE = "articles_franceinfosports.json"
+    DATA_FILE = "data/stack-overflow-data.csv"
 
-    with open(DATA_FILE, encoding="utf-8") as file:
-        articles = [Article(**article) for article in json.load(file)]
+    df = pd.read_csv(DATA_FILE)
 
-    # articles = list(filter(lambda a: a.title.startswith("Football"), articles))
+    posts = [Post(**post) for post in df.to_dict(orient="records")]
 
-    statistics(articles)
+    statistics(posts)
 
-    for article in tqdm(articles, desc="Applying operations"):
-        article.apply(Operations.remove_duplicate_whitespace)
-        article.apply(Operations.remove_stop_words)
+    for post in tqdm(posts, desc="Applying operations"):
+        post.apply(Operations.remove_duplicate_whitespace)
+        post.apply(Operations.remove_stop_words)
 
-        article.apply(Operations.remove_duplicate_whitespace)
-        article.apply(Operations.remove_apostrophes)
+        post.apply(Operations.remove_duplicate_whitespace)
+        post.apply(Operations.remove_apostrophes)
 
         # article.apply_transformation(Operations.remove_duplicate_whitespace)
         # article.apply_transformation(Operations.lemmatize)
 
-        article.apply(Operations.remove_duplicate_whitespace)
-        article.apply(Operations.remove_double_dash)
+        post.apply(Operations.remove_duplicate_whitespace)
+        post.apply(Operations.remove_double_dash)
 
-        article.apply(Operations.remove_duplicate_whitespace)
+        post.apply(Operations.remove_duplicate_whitespace)
         # This one at the end because it assumes current state is normal
-        article.apply(Operations.remove_extra_whitespace)
+        post.apply(Operations.remove_extra_whitespace)
 
     with open("results.json", "w", encoding="utf-8") as file:
         json.dump(
-            [attrs.asdict(article) for article in articles],
+            [attrs.asdict(post) for post in posts],
             file,
         )
