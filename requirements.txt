@@ -1,2 +1,4 @@
 attrs
 tqdm
+spacy
+unidecode
