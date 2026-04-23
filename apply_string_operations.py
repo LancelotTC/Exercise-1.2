@@ -54,8 +54,6 @@ class Operations:
 if __name__ == "__main__":
     posts = load_dataset()
 
-    statistics(posts)
-
     for post in tqdm(posts, desc="Applying operations"):
         post.apply(Operations.remove_duplicate_whitespace)
         post.apply(Operations.remove_stop_words)
