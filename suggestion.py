@@ -1,9 +1,9 @@
 from tqdm import tqdm
 import re, json, attrs
 from pathlib import Path
+from typing import Optional
 from functools import partial
-from collections.abc import Callable
-from tools.mathtools import average
+from collections.abc import Callable, Iterable
 
 
 @attrs.define
@@ -81,6 +81,15 @@ class Operations:
     @staticmethod
     def remove_double_dash(string: str):
         return re.sub(r"\s?\-\-\s?", " ", string)
+
+
+def average(numbers: Iterable[int | float], key: Optional[Callable] = lambda x: x) -> int | float:
+    """Returns average of all numerical values in a one-dimensional Iterable or Mapping-like object"""
+
+    if not isinstance(numbers, Iterable) or isinstance(numbers, str):
+        raise TypeError(f"Expected object of type Iterable, got {type(numbers).__name__}")
+
+    return sum((key(n) for n in numbers)) / len(numbers)
 
 
 def statistics(articles: list[Article]):
