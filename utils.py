@@ -1,11 +1,9 @@
-from tqdm import tqdm
-import re, json, attrs
-from pathlib import Path
+import attrs
+import pandas as pd
+from constants import *
 from typing import Optional
 from functools import partial
 from collections.abc import Callable, Iterable
-import pandas as pd
-from constants import *
 
 
 @attrs.define
