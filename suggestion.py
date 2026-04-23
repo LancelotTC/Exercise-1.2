@@ -1,26 +1,12 @@
+import pandas as pd
 from tqdm import tqdm
 import re, json, attrs
 from pathlib import Path
 from typing import Optional
 from functools import partial
 from collections.abc import Callable, Iterable
-import pandas as pd
-
-
-DATA_FOLDER = Path("data/")
-
-
-@attrs.define
-class Post:
-    post: str = ""
-    tags: str = ""
-
-    def apply(self, func: Callable[[str], str]):
-        self.post = func(self.post)
-        self.tags = func(self.tags)
-
-    def remove_words(self, word: str):
-        self.apply(partial(str.replace, old=word, new=""))
+from utils import average, load_dataset, Post
+from constants import *
 
 
 class Operations:
@@ -115,11 +101,7 @@ def statistics(articles: list[Post]):
 
 
 if __name__ == "__main__":
-    DATA_FILE = DATA_FOLDER / "stack-overflow-data.csv"
-
-    df = pd.read_csv(DATA_FILE)
-
-    posts = [Post(**post) for post in df.to_dict(orient="records")]
+    posts = load_dataset()
 
     statistics(posts)
 
