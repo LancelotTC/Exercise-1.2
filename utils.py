@@ -8,6 +8,7 @@ from collections.abc import Callable, Iterable
 
 @attrs.define
 class Post:
+    id: Optional[int] = None
     post: str = ""
     tags: str = ""
 
@@ -16,7 +17,7 @@ class Post:
         self.tags = func(self.tags)
 
 
-def average(numbers: Iterable[int | float], key: Optional[Callable] = lambda x: x) -> int | float:
+def average(numbers: Iterable[int | float], key: Optional[Callable] = lambda x: x):
     """Returns average of all numerical values in a one-dimensional Iterable or Mapping-like object"""
 
     if not isinstance(numbers, Iterable) or isinstance(numbers, str):

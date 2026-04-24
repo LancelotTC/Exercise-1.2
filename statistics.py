@@ -1,12 +1,13 @@
-import re
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-import nltk
 import pandas as pd
-from nltk.corpus import stopwords
 
+from generate_vectors import (
+    FeatureExtraction,
+    collect_feature_words,
+)
 from utils import average, load_dataset
 
 
@@ -14,7 +15,7 @@ OUTPUT_DIR = Path("statistics")
 OUTPUT_DIR.mkdir(exist_ok=True)
 
 
-def save_plot(filename: str) -> None:
+def save_plot(filename: str):
     plt.tight_layout()
     plt.savefig(OUTPUT_DIR / filename, dpi=150)
     if "agg" not in plt.get_backend().lower():
@@ -22,8 +23,7 @@ def save_plot(filename: str) -> None:
     plt.close()
 
 
-def load_data() -> pd.DataFrame:
-    posts = load_dataset()
+def load_data(posts: list):
     df = pd.DataFrame(
         [{"post": post.post, "tags": post.tags} for post in posts],
         columns=["post", "tags"],
@@ -35,7 +35,7 @@ def load_data() -> pd.DataFrame:
     return df
 
 
-def print_basic_info(df: pd.DataFrame) -> None:
+def print_basic_info(df: pd.DataFrame):
     print("==== BASIC INFO ====")
     print(df[["post", "tags"]].head())
     print("\nShape:", df[["post", "tags"]].shape)
@@ -43,12 +43,11 @@ def print_basic_info(df: pd.DataFrame) -> None:
     print("\nMissing values:\n", df[["post", "tags"]].isnull().sum())
 
 
-def tag_is_in_text(text: str, tag: str) -> bool:
-    pattern = rf"(?<![a-z0-9#\+\.-]){re.escape(tag)}(?![a-z0-9#\+\.-])"
-    return bool(re.search(pattern, text))
+def tag_is_in_text(text: str, tag: str):
+    return FeatureExtraction.mentions_tag(text, tag) == "1"
 
 
-def analyze_tag_distribution(df: pd.DataFrame) -> Counter:
+def analyze_tag_distribution(df: pd.DataFrame):
     print("\n==== TAG EXPLORATION ====")
     print("\nAverage number of tags per question:", average(df["num_tags"]))
     print("Max number of tags:", df["num_tags"].max())
@@ -71,7 +70,7 @@ def analyze_tag_distribution(df: pd.DataFrame) -> Counter:
     return tag_counts
 
 
-def analyze_tag_match(df: pd.DataFrame) -> None:
+def analyze_tag_match(df: pd.DataFrame):
     result = (
         df.assign(
             match=df.apply(
@@ -96,7 +95,7 @@ def analyze_tag_match(df: pd.DataFrame) -> None:
     save_plot("tag self mention proportion.png")
 
 
-def analyze_wrong_tag_mentions(df: pd.DataFrame) -> None:
+def analyze_wrong_tag_mentions(df: pd.DataFrame):
     rows = []
 
     for tag in sorted(df["tags"].unique()):
@@ -130,18 +129,13 @@ def analyze_wrong_tag_mentions(df: pd.DataFrame) -> None:
     save_plot("tag mismatch proportion.png")
 
 
-def analyze_top_words(df: pd.DataFrame, tag_counts: Counter) -> None:
-    try:
-        stop_words = set(stopwords.words("english"))
-    except LookupError:
-        nltk.download("stopwords", quiet=True)
-        stop_words = set(stopwords.words("english"))
+def analyze_top_words(top_words_by_tag: dict[str, list[str]], posts):
+    tag_word_counts = {tag: Counter() for tag in top_words_by_tag}
 
-    tag_word_counts = defaultdict(Counter)
-    for _, row in df.iterrows():
-        words = [word for word in row["post"].split() if word not in stop_words]
-        for tag in row["tags_list"]:
-            if tag:
+    for post in posts:
+        words = FeatureExtraction.content_words(post.post)
+        for tag in post.tags.lower().split(";"):
+            if tag in tag_word_counts:
                 tag_word_counts[tag].update(words)
 
     print("\n==== MOST RECURRENT WORDS PER TOP TAG ====")
@@ -155,8 +149,8 @@ def analyze_top_words(df: pd.DataFrame, tag_counts: Counter) -> None:
         "ruby-on-rails": "top_words_ruby_on_rails.png",
     }
 
-    for tag, _ in tag_counts.most_common(10):
-        most_common = tag_word_counts[tag].most_common(10)
+    for tag, words in top_words_by_tag.items():
+        most_common = [(word, tag_word_counts[tag][word]) for word in words]
 
         print(f"\n--- {tag} ---")
         for word, count in most_common:
@@ -177,33 +171,19 @@ def analyze_top_words(df: pd.DataFrame, tag_counts: Counter) -> None:
         save_plot(filename)
 
 
-def analyze_exclusive_words(df: pd.DataFrame) -> None:
-    class_word_counts = defaultdict(Counter)
+def analyze_exclusive_words(exclusive_words_by_tag: dict[str, list[str]], posts):
+    exclusive_word_counts = {tag: Counter() for tag in exclusive_words_by_tag}
 
-    for _, row in df.iterrows():
-        words = row["post"].split()
-        for tag in row["tags_list"]:
-            if tag:
-                class_word_counts[tag].update(words)
-
-    class_words = {
-        tag: set(counter.keys())
-        for tag, counter in class_word_counts.items()
-    }
+    for post in posts:
+        words = FeatureExtraction.unique_words(post.post)
+        for tag in post.tags.lower().split(";"):
+            if tag in exclusive_word_counts:
+                exclusive_word_counts[tag].update(words)
 
     print("\n==== EXCLUSIVE WORDS PER CLASS ====\n")
 
-    for tag in sorted(class_words):
-        other_words = set().union(
-            *(class_words[other_tag] for other_tag in class_words if other_tag != tag)
-        )
-        exclusive_words = class_words[tag] - other_words
-        ranked_words = [
-            (word, count)
-            for word, count in class_word_counts[tag].most_common()
-            if word in exclusive_words
-        ][:20]
-
+    for tag in sorted(exclusive_words_by_tag):
+        ranked_words = [(word, exclusive_word_counts[tag][word]) for word in exclusive_words_by_tag[tag]]
         print(f"--- {tag} ---")
         if not ranked_words:
             print("No exclusive words found")
@@ -213,15 +193,17 @@ def analyze_exclusive_words(df: pd.DataFrame) -> None:
         print()
 
 
-def main() -> None:
-    df = load_data()
+def main():
+    posts = load_dataset()
+    df = load_data(posts)
+    _, top_words_by_tag, exclusive_words_by_tag = collect_feature_words(posts)
     print_basic_info(df)
 
-    tag_counts = analyze_tag_distribution(df)
+    analyze_tag_distribution(df)
     analyze_tag_match(df)
     analyze_wrong_tag_mentions(df)
-    analyze_top_words(df, tag_counts)
-    analyze_exclusive_words(df)
+    analyze_top_words(top_words_by_tag, posts)
+    analyze_exclusive_words(exclusive_words_by_tag, posts)
 
 
 if __name__ == "__main__":
