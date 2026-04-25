@@ -48,17 +48,17 @@ class FeatureExtraction:
         normalized_text = FeatureExtraction.normalize(text)
         normalized_tag = FeatureExtraction.normalize(tag)
         pattern = rf"(?<![a-z0-9#\+\.-]){re.escape(normalized_tag)}(?![a-z0-9#\+\.-])"
-        return str(int(bool(re.search(pattern, normalized_text))))
+        return int(bool(re.search(pattern, normalized_text)))
 
     @staticmethod
     def top_words_score(text: str, words: list[str]):
         word_counts = Counter(FeatureExtraction.content_words(text))
-        return str(sum(word_counts[word] for word in words))
+        return sum(word_counts[word] for word in words)
 
     @staticmethod
     def exclusive_words_score(text: str, words: list[str]):
         text_words = FeatureExtraction.unique_words(text)
-        return str(sum(word in text_words for word in words))
+        return sum(word in text_words for word in words)
 
 
 def split_tags(tags: str):
@@ -80,7 +80,7 @@ def collect_feature_words(posts: list[Post]):
     exclusive_word_counts = defaultdict(Counter)
 
     for post in posts:
-        tags = split_tags(post.tags)
+        tags = split_tags(post.tags)  # tags are individual so no need for splitting
         tag_counts.update(tags)
 
         content_words = FeatureExtraction.content_words(post.post)
@@ -122,14 +122,14 @@ def build_vector_row(
     }
 
     for tag in all_tags:
-        row[f"mentions_tag__{feature_name(tag)}"] = int(FeatureExtraction.mentions_tag(post.post, tag))
+        row[f"mentions_tag__{feature_name(tag)}"] = FeatureExtraction.mentions_tag(post.post, tag)
 
     for tag, words in top_words_by_tag.items():
-        row[f"top_words_score__{feature_name(tag)}"] = int(FeatureExtraction.top_words_score(post.post, words))
+        row[f"top_words_score__{feature_name(tag)}"] = FeatureExtraction.top_words_score(post.post, words)
 
     for tag in all_tags:
-        row[f"exclusive_words_score__{feature_name(tag)}"] = int(
-            FeatureExtraction.exclusive_words_score(post.post, exclusive_words_by_tag[tag])
+        row[f"exclusive_words_score__{feature_name(tag)}"] = FeatureExtraction.exclusive_words_score(
+            post.post, exclusive_words_by_tag[tag]
         )
 
     return row
