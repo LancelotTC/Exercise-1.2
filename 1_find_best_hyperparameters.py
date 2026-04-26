@@ -1,13 +1,16 @@
-from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold, train_test_split
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import LabelEncoder
 from sklearn.tree import DecisionTreeClassifier
 from skopt import BayesSearchCV
+from skopt.callbacks import DeltaYStopper
 from skopt.space import Categorical, Integer, Real
 from xgboost import XGBClassifier
 
 from constants import (
+    HYPERPARAMETER_SEARCH_DELTA_Y,
+    HYPERPARAMETER_SEARCH_DELTA_Y_N_BEST,
     HYPERPARAMETER_SEARCH_FOLDS,
     HYPERPARAMETER_SEARCH_ITERATIONS,
     HYPERPARAMETER_SEARCH_JOBS,
@@ -43,20 +46,8 @@ def build_searches():
                 "C": Real(1e-4, 1e3, prior="log-uniform"),
                 "class_weight": Categorical([None, "balanced"]),
                 "fit_intercept": Categorical([True, False]),
+                "solver": Categorical(["lbfgs", "newton-cg", "newton-cholesky", "sag", "saga"]),
                 "tol": Real(1e-6, 1e-2, prior="log-uniform"),
-            },
-        ),
-        "RandomForestClassifier": (
-            RandomForestClassifier(random_state=RANDOM_SEED, n_jobs=HYPERPARAMETER_SEARCH_JOBS),
-            {
-                "n_estimators": Integer(100, 2500),
-                "max_depth": Categorical([None, 4, 8, 12, 20, 40, 80]),
-                "min_samples_split": Integer(2, 200),
-                "min_samples_leaf": Integer(1, 100),
-                "max_features": Real(0.05, 1.0),
-                "bootstrap": Categorical([True, False]),
-                "criterion": Categorical(["gini", "entropy", "log_loss"]),
-                "class_weight": Categorical([None, "balanced"]),
             },
         ),
         "DecisionTreeClassifier": (
@@ -64,26 +55,25 @@ def build_searches():
             {
                 "criterion": Categorical(["gini", "entropy", "log_loss"]),
                 "splitter": Categorical(["best", "random"]),
-                "max_depth": Categorical([None, 2, 4, 6, 8, 12, 20, 40, 80]),
-                "min_samples_split": Integer(2, 500),
-                "min_samples_leaf": Integer(1, 250),
-                "max_features": Categorical([None, "sqrt", "log2"]),
-                "class_weight": Categorical([None, "balanced"]),
-                "min_impurity_decrease": Real(0.0, 0.05),
-                "ccp_alpha": Real(1e-10, 1.0, prior="log-uniform"),
+                "max_depth": Categorical([None, 6, 8, 12, 20, 40, 80, 120]),
+                "max_leaf_nodes": Categorical([None, 16, 32, 64, 128, 256, 512, 1024]),
+                "min_samples_split": Categorical([2, 3, 4, 5, 8, 12, 20, 40, 80, 160, 320]),
+                "min_samples_leaf": Categorical([1, 2, 3, 4, 5, 8, 12, 20, 40, 80]),
+                "min_weight_fraction_leaf": Categorical([0.0, 1e-5, 1e-4, 1e-3, 5e-3, 1e-2]),
+                "max_features": Categorical([None, "sqrt", "log2", 0.25, 0.5, 0.75]),
+                "min_impurity_decrease": Categorical([0.0, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3]),
+                "ccp_alpha": Categorical([0.0, 1e-12, 1e-10, 1e-8, 1e-6, 1e-4, 1e-3, 1e-2]),
             },
         ),
-        "HistGradientBoostingClassifier": (
-            HistGradientBoostingClassifier(random_state=RANDOM_SEED),
+        "KNeighborsClassifier": (
+            KNeighborsClassifier(n_jobs=HYPERPARAMETER_SEARCH_JOBS),
             {
-                "learning_rate": Real(1e-3, 0.5, prior="log-uniform"),
-                "max_iter": Integer(100, 3000),
-                "max_depth": Categorical([None, 2, 3, 5, 8, 12, 20]),
-                "max_leaf_nodes": Integer(7, 255),
-                "min_samples_leaf": Integer(2, 500),
-                "l2_regularization": Real(1e-10, 100.0, prior="log-uniform"),
-                "max_features": Real(0.2, 1.0),
-                "class_weight": Categorical([None, "balanced"]),
+                "n_neighbors": Integer(1, 200),
+                "weights": Categorical(["uniform", "distance"]),
+                "algorithm": Categorical(["auto", "ball_tree", "kd_tree", "brute"]),
+                "metric": Categorical(["minkowski", "euclidean", "manhattan", "chebyshev"]),
+                "p": Integer(1, 2),
+                "leaf_size": Integer(10, 100),
             },
         ),
         "XGBClassifier": (
@@ -101,9 +91,15 @@ def build_searches():
                 "min_child_weight": Integer(1, 50),
                 "subsample": Real(0.3, 1.0),
                 "colsample_bytree": Real(0.3, 1.0),
+                "colsample_bylevel": Real(0.3, 1.0),
+                "colsample_bynode": Real(0.3, 1.0),
                 "gamma": Real(1e-10, 10.0, prior="log-uniform"),
                 "reg_alpha": Real(1e-10, 100.0, prior="log-uniform"),
                 "reg_lambda": Real(1e-3, 100.0, prior="log-uniform"),
+                "max_delta_step": Integer(0, 10),
+                "max_bin": Integer(64, 512),
+                "max_leaves": Categorical([0, 31, 63, 127, 255, 511]),
+                "num_parallel_tree": Integer(1, 8),
                 "grow_policy": Categorical(["depthwise", "lossguide"]),
             },
         ),
@@ -113,22 +109,31 @@ def build_searches():
 def run_hyperparameter_search():
     features, target, _ = load_modeling_data()
     features, target = sample_training_rows(features, target)
+    searches = build_searches()
 
     cv = StratifiedKFold(
         n_splits=HYPERPARAMETER_SEARCH_FOLDS,
         shuffle=True,
         random_state=RANDOM_SEED,
     )
-    results = load_hyperparameter_results()
+    loaded_results = load_hyperparameter_results()
+    results = {model_name: loaded_results[model_name] for model_name in searches if model_name in loaded_results}
+
+    if results != loaded_results:
+        save_json_file(HYPERPARAMETERS_FILE, results)
 
     print(f"Training rows: {len(features)}")
     print(f"Feature columns: {len(features.columns)}")
 
-    for model_name, (model, search_space) in build_searches().items():
+    for model_name, (model, search_space) in searches.items():
         search_target = target
         if model_name == "XGBClassifier":
             search_target = LabelEncoder().fit_transform(target)
         print(f"\nSearching {model_name} ({HYPERPARAMETER_SEARCH_ITERATIONS} iterations)")
+        print(
+            f"DeltaYStopper enabled: delta={HYPERPARAMETER_SEARCH_DELTA_Y}, "
+            f"n_best={HYPERPARAMETER_SEARCH_DELTA_Y_N_BEST}"
+        )
 
         search = BayesSearchCV(
             estimator=model,
@@ -141,13 +146,23 @@ def run_hyperparameter_search():
             refit=True,
             verbose=0,
         )
-        search.fit(features, search_target)
+        search.fit(
+            features,
+            search_target,
+            callback=DeltaYStopper(
+                HYPERPARAMETER_SEARCH_DELTA_Y,
+                n_best=HYPERPARAMETER_SEARCH_DELTA_Y_N_BEST,
+            ),
+        )
 
         best_score = float(search.best_score_)
         previous_result = results.get(model_name, {})
         previous_rows = previous_result.get("training_rows")
+        previous_feature_columns = previous_result.get("feature_columns")
         previous_score = (
-            float(previous_result.get("best_score", float("-inf"))) if previous_rows == len(features) else float("-inf")
+            float(previous_result.get("best_score", float("-inf")))
+            if previous_rows == len(features) and previous_feature_columns == len(features.columns)
+            else float("-inf")
         )
 
         if best_score <= previous_score:

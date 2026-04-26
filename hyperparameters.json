@@ -11,38 +11,6 @@
         "feature_columns": 149,
         "scoring": "f1_macro"
     },
-    "RandomForestClassifier": {
-        "best_score": 0.7439848419677656,
-        "best_params": {
-            "bootstrap": false,
-            "class_weight": "balanced",
-            "criterion": "entropy",
-            "max_depth": 80,
-            "max_features": 0.05,
-            "min_samples_leaf": 1,
-            "min_samples_split": 115,
-            "n_estimators": 100
-        },
-        "training_rows": 40000,
-        "feature_columns": 149,
-        "scoring": "f1_macro"
-    },
-    "HistGradientBoostingClassifier": {
-        "best_score": 0.004701397712833545,
-        "best_params": {
-            "class_weight": null,
-            "l2_regularization": 0.05403920087790609,
-            "learning_rate": 0.3294448682101093,
-            "max_depth": 3,
-            "max_features": 0.7361183586151478,
-            "max_iter": 1301,
-            "max_leaf_nodes": 94,
-            "min_samples_leaf": 370
-        },
-        "training_rows": 1500,
-        "feature_columns": 60,
-        "scoring": "f1_macro"
-    },
     "XGBClassifier": {
         "best_score": 0.004701397712833545,
         "best_params": {
@@ -59,23 +27,6 @@
         },
         "training_rows": 1500,
         "feature_columns": 60,
-        "scoring": "f1_macro"
-    },
-    "DecisionTreeClassifier": {
-        "best_score": 0.697704229239268,
-        "best_params": {
-            "ccp_alpha": 1e-10,
-            "class_weight": "balanced",
-            "criterion": "gini",
-            "max_depth": 40,
-            "max_features": null,
-            "min_impurity_decrease": 0.0,
-            "min_samples_leaf": 1,
-            "min_samples_split": 2,
-            "splitter": "random"
-        },
-        "training_rows": 40000,
-        "feature_columns": 102,
         "scoring": "f1_macro"
     }
 }

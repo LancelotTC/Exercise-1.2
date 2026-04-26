@@ -2,7 +2,6 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
-from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     ConfusionMatrixDisplay,
@@ -13,6 +12,7 @@ from sklearn.metrics import (
     recall_score,
 )
 from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import LabelEncoder
 from sklearn.tree import DecisionTreeClassifier
 from xgboost import XGBClassifier
@@ -30,15 +30,21 @@ from constants import (
 from utils import load_hyperparameter_results, load_modeling_data
 
 
+MODEL_ORDER = [
+    "LogisticRegression",
+    "DecisionTreeClassifier",
+    "KNeighborsClassifier",
+    "XGBClassifier",
+]
+
+
 def build_model(model_name: str, best_params: dict):
     if model_name == "LogisticRegression":
         return LogisticRegression(max_iter=4000, random_state=RANDOM_SEED, **best_params)
-    if model_name == "RandomForestClassifier":
-        return RandomForestClassifier(random_state=RANDOM_SEED, n_jobs=-1, **best_params)
     if model_name == "DecisionTreeClassifier":
         return DecisionTreeClassifier(random_state=RANDOM_SEED, **best_params)
-    if model_name == "HistGradientBoostingClassifier":
-        return HistGradientBoostingClassifier(random_state=RANDOM_SEED, **best_params)
+    if model_name == "KNeighborsClassifier":
+        return KNeighborsClassifier(n_jobs=-1, **best_params)
     if model_name == "XGBClassifier":
         return XGBClassifier(
             random_state=RANDOM_SEED,
@@ -162,6 +168,7 @@ def fit_and_predict(model_name: str, model, X_train, y_train, X_predict):
 
 def run_individual_predictions():
     results = load_hyperparameter_results()
+    results = {model_name: results[model_name] for model_name in MODEL_ORDER if model_name in results}
     if not results:
         raise RuntimeError(f"No hyperparameter results found in '{HYPERPARAMETERS_FILE}'.")
 
