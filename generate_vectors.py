@@ -4,7 +4,13 @@ from pathlib import Path
 
 import pandas as pd
 
-from constants import ENGLISH_STOPWORDS_FILE, VECTOR_POST_LIMIT, VECTORS_FILE
+from constants import (
+    ALTERNATIVE_CLASS_SPELLINGS,
+    ENGLISH_STOPWORDS_FILE,
+    PHRASE_FEATURES,
+    VECTOR_POST_LIMIT,
+    VECTORS_FILE,
+)
 from utils import Post, load_dataset
 
 
@@ -51,18 +57,19 @@ class FeatureExtraction:
         return int(bool(re.search(pattern, normalized_text)))
 
     @staticmethod
-    def top_words_score(text: str, words: list[str]):
-        word_counts = Counter(FeatureExtraction.content_words(text))
-        return sum(word_counts[word] for word in words)
+    def has_exclusive_words(text: str, words: list[str]):
+        text_words = FeatureExtraction.unique_words(text)
+        return int(any(word in text_words for word in words))
 
     @staticmethod
-    def exclusive_words_score(text: str, words: list[str]):
-        text_words = FeatureExtraction.unique_words(text)
-        return sum(word in text_words for word in words)
+    def has_alternative_spelling(text: str, spellings: tuple[str, ...]):
+        return int(any(FeatureExtraction.mentions_tag(text, spelling) for spelling in spellings))
 
-
-def split_tags(tags: str):
-    return [tag for tag in FeatureExtraction.normalize(tags).split(";") if tag]
+    @staticmethod
+    def contains_phrase(text: str, phrase: str):
+        normalized_text = FeatureExtraction.normalize(text)
+        normalized_phrase = FeatureExtraction.normalize(phrase)
+        return int(bool(normalized_phrase) and normalized_phrase in normalized_text)
 
 
 def feature_name(name: str):
@@ -80,15 +87,14 @@ def collect_feature_words(posts: list[Post]):
     exclusive_word_counts = defaultdict(Counter)
 
     for post in posts:
-        tags = split_tags(post.tags)  # tags are individual so no need for splitting
-        tag_counts.update(tags)
+        tag = FeatureExtraction.normalize(post.tags)
+        tag_counts[tag] += 1
 
         content_words = FeatureExtraction.content_words(post.post)
         unique_words = FeatureExtraction.unique_words(post.post)
 
-        for tag in tags:
-            top_word_counts[tag].update(content_words)
-            exclusive_word_counts[tag].update(unique_words)
+        top_word_counts[tag].update(content_words)
+        exclusive_word_counts[tag].update(unique_words)
 
     all_tags = sorted(tag_counts)
     top_words_by_tag: dict[str, list[str]] = {}
@@ -113,7 +119,6 @@ def build_vector_row(
     post: Post,
     row_index: int,
     all_tags: list[str],
-    top_words_by_tag: dict[str, list[str]],
     exclusive_words_by_tag: dict[str, list[str]],
 ):
     row: dict[str, int | str] = {
@@ -122,25 +127,27 @@ def build_vector_row(
     }
 
     for tag in all_tags:
-        row[f"mentions_tag__{feature_name(tag)}"] = FeatureExtraction.mentions_tag(post.post, tag)
-
-    for tag, words in top_words_by_tag.items():
-        row[f"top_words_score__{feature_name(tag)}"] = FeatureExtraction.top_words_score(post.post, words)
+        row[f"contains_class__{feature_name(tag)}"] = FeatureExtraction.mentions_tag(post.post, tag)
 
     for tag in all_tags:
-        row[f"exclusive_words_score__{feature_name(tag)}"] = FeatureExtraction.exclusive_words_score(
+        row[f"contains_exclusive_words__{feature_name(tag)}"] = FeatureExtraction.has_exclusive_words(
             post.post, exclusive_words_by_tag[tag]
         )
+
+    for tag in all_tags:
+        row[f"contains_alternative_spelling__{feature_name(tag)}"] = FeatureExtraction.has_alternative_spelling(
+            post.post, ALTERNATIVE_CLASS_SPELLINGS[tag]
+        )
+
+    for phrase in PHRASE_FEATURES:
+        row[f"contains_phrase__{feature_name(phrase)}"] = FeatureExtraction.contains_phrase(post.post, phrase)
 
     return row
 
 
 def write_vectors(posts: list[Post], reference_posts: list[Post], output_path: Path):
-    all_tags, top_words_by_tag, exclusive_words_by_tag = collect_feature_words(reference_posts)
-    rows = [
-        build_vector_row(post, index, all_tags, top_words_by_tag, exclusive_words_by_tag)
-        for index, post in enumerate(posts)
-    ]
+    all_tags, _, exclusive_words_by_tag = collect_feature_words(reference_posts)
+    rows = [build_vector_row(post, index, all_tags, exclusive_words_by_tag) for index, post in enumerate(posts)]
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(rows).to_csv(output_path, index=False)

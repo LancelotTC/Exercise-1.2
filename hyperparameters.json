@@ -1,0 +1,81 @@
+{
+    "LogisticRegression": {
+        "best_score": 0.636959911066172,
+        "best_params": {
+            "C": 0.07425534359037013,
+            "class_weight": "balanced",
+            "fit_intercept": false,
+            "tol": 1.8331515651137157e-05
+        },
+        "training_rows": 1500,
+        "feature_columns": 60,
+        "scoring": "f1_macro"
+    },
+    "RandomForestClassifier": {
+        "best_score": 0.06540351390240443,
+        "best_params": {
+            "bootstrap": true,
+            "class_weight": "balanced",
+            "criterion": "log_loss",
+            "max_depth": 8,
+            "max_features": 0.6866405508554879,
+            "min_samples_leaf": 42,
+            "min_samples_split": 71,
+            "n_estimators": 1875
+        },
+        "training_rows": 1500,
+        "feature_columns": 60,
+        "scoring": "f1_macro"
+    },
+    "HistGradientBoostingClassifier": {
+        "best_score": 0.004701397712833545,
+        "best_params": {
+            "class_weight": null,
+            "l2_regularization": 0.05403920087790609,
+            "learning_rate": 0.3294448682101093,
+            "max_depth": 3,
+            "max_features": 0.7361183586151478,
+            "max_iter": 1301,
+            "max_leaf_nodes": 94,
+            "min_samples_leaf": 370
+        },
+        "training_rows": 1500,
+        "feature_columns": 60,
+        "scoring": "f1_macro"
+    },
+    "XGBClassifier": {
+        "best_score": 0.004701397712833545,
+        "best_params": {
+            "colsample_bytree": 0.5870727711973196,
+            "gamma": 0.010115402653101345,
+            "grow_policy": "lossguide",
+            "learning_rate": 0.007117600862757295,
+            "max_depth": 14,
+            "min_child_weight": 21,
+            "n_estimators": 1118,
+            "reg_alpha": 0.07482570377261556,
+            "reg_lambda": 0.03329021156509418,
+            "subsample": 0.7534541118428143
+        },
+        "training_rows": 1500,
+        "feature_columns": 60,
+        "scoring": "f1_macro"
+    },
+    "DecisionTreeClassifier": {
+        "best_score": 0.00482233502538071,
+        "best_params": {
+            "ccp_alpha": 1.2619425629415188e-06,
+            "class_weight": "balanced",
+            "criterion": "log_loss",
+            "max_depth": 4,
+            "max_features": "log2",
+            "min_impurity_decrease": 0.020705931624276926,
+            "min_samples_leaf": 88,
+            "min_samples_split": 370,
+            "splitter": "best"
+        },
+        "training_rows": 1500,
+        "feature_columns": 60,
+        "scoring": "f1_macro"
+    }
+}

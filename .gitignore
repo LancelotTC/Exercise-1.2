@@ -2,7 +2,7 @@
 /venv
 /__pycache__
 /statistics
-
+/predictions
 
 tempCodeRunnerFile.*
 *.pyc

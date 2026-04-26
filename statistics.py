@@ -30,8 +30,7 @@ def load_data(posts: list):
     )
     df["post"] = df["post"].fillna("").astype(str).str.lower()
     df["tags"] = df["tags"].fillna("").astype(str).str.lower()
-    df["tags_list"] = df["tags"].apply(lambda value: value.split(";"))
-    df["num_tags"] = df["tags_list"].apply(len)
+    df["num_tags"] = 1
     return df
 
 
@@ -44,7 +43,7 @@ def print_basic_info(df: pd.DataFrame):
 
 
 def tag_is_in_text(text: str, tag: str):
-    return FeatureExtraction.mentions_tag(text, tag) == "1"
+    return bool(FeatureExtraction.mentions_tag(text, tag))
 
 
 def analyze_tag_distribution(df: pd.DataFrame):
@@ -52,7 +51,7 @@ def analyze_tag_distribution(df: pd.DataFrame):
     print("\nAverage number of tags per question:", average(df["num_tags"]))
     print("Max number of tags:", df["num_tags"].max())
 
-    tag_counts = Counter(tag for tags in df["tags_list"] for tag in tags if tag)
+    tag_counts = Counter(df["tags"])
 
     print("\nTop 20 most common tags:")
     for tag, count in tag_counts.most_common(20):
@@ -133,10 +132,10 @@ def analyze_top_words(top_words_by_tag: dict[str, list[str]], posts):
     tag_word_counts = {tag: Counter() for tag in top_words_by_tag}
 
     for post in posts:
+        tag = FeatureExtraction.normalize(post.tags)
         words = FeatureExtraction.content_words(post.post)
-        for tag in post.tags.lower().split(";"):
-            if tag in tag_word_counts:
-                tag_word_counts[tag].update(words)
+        if tag in tag_word_counts:
+            tag_word_counts[tag].update(words)
 
     print("\n==== MOST RECURRENT WORDS PER TOP TAG ====")
 
@@ -175,10 +174,10 @@ def analyze_exclusive_words(exclusive_words_by_tag: dict[str, list[str]], posts)
     exclusive_word_counts = {tag: Counter() for tag in exclusive_words_by_tag}
 
     for post in posts:
+        tag = FeatureExtraction.normalize(post.tags)
         words = FeatureExtraction.unique_words(post.post)
-        for tag in post.tags.lower().split(";"):
-            if tag in exclusive_word_counts:
-                exclusive_word_counts[tag].update(words)
+        if tag in exclusive_word_counts:
+            exclusive_word_counts[tag].update(words)
 
     print("\n==== EXCLUSIVE WORDS PER CLASS ====\n")
 

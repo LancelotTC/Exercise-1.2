@@ -7,3 +7,6 @@ unidecode
 pandas
 nltk
 matplotlib
+scikit-learn
+scikit-optimize
+xgboost
