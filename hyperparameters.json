@@ -1,30 +1,30 @@
 {
     "LogisticRegression": {
-        "best_score": 0.636959911066172,
+        "best_score": 0.7506317326699842,
         "best_params": {
-            "C": 0.07425534359037013,
+            "C": 4.817207203110023,
             "class_weight": "balanced",
             "fit_intercept": false,
-            "tol": 1.8331515651137157e-05
+            "tol": 1e-06
         },
-        "training_rows": 1500,
-        "feature_columns": 60,
+        "training_rows": 40000,
+        "feature_columns": 149,
         "scoring": "f1_macro"
     },
     "RandomForestClassifier": {
-        "best_score": 0.06540351390240443,
+        "best_score": 0.7439848419677656,
         "best_params": {
-            "bootstrap": true,
+            "bootstrap": false,
             "class_weight": "balanced",
-            "criterion": "log_loss",
-            "max_depth": 8,
-            "max_features": 0.6866405508554879,
-            "min_samples_leaf": 42,
-            "min_samples_split": 71,
-            "n_estimators": 1875
+            "criterion": "entropy",
+            "max_depth": 80,
+            "max_features": 0.05,
+            "min_samples_leaf": 1,
+            "min_samples_split": 115,
+            "n_estimators": 100
         },
-        "training_rows": 1500,
-        "feature_columns": 60,
+        "training_rows": 40000,
+        "feature_columns": 149,
         "scoring": "f1_macro"
     },
     "HistGradientBoostingClassifier": {

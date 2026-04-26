@@ -37,28 +37,28 @@ def sample_training_rows(features, target):
 
 def build_searches():
     return {
-        # "LogisticRegression": (
-        #     LogisticRegression(max_iter=4000, random_state=RANDOM_SEED),
-        #     {
-        #         "C": Real(1e-4, 1e3, prior="log-uniform"),
-        #         "class_weight": Categorical([None, "balanced"]),
-        #         "fit_intercept": Categorical([True, False]),
-        #         "tol": Real(1e-6, 1e-2, prior="log-uniform"),
-        #     },
-        # ),
-        # "RandomForestClassifier": (
-        #     RandomForestClassifier(random_state=RANDOM_SEED, n_jobs=HYPERPARAMETER_SEARCH_JOBS),
-        #     {
-        #         "n_estimators": Integer(100, 2500),
-        #         "max_depth": Categorical([None, 4, 8, 12, 20, 40, 80]),
-        #         "min_samples_split": Integer(2, 200),
-        #         "min_samples_leaf": Integer(1, 100),
-        #         "max_features": Real(0.05, 1.0),
-        #         "bootstrap": Categorical([True, False]),
-        #         "criterion": Categorical(["gini", "entropy", "log_loss"]),
-        #         "class_weight": Categorical([None, "balanced"]),
-        #     },
-        # ),
+        "LogisticRegression": (
+            LogisticRegression(max_iter=4000, random_state=RANDOM_SEED),
+            {
+                "C": Real(1e-4, 1e3, prior="log-uniform"),
+                "class_weight": Categorical([None, "balanced"]),
+                "fit_intercept": Categorical([True, False]),
+                "tol": Real(1e-6, 1e-2, prior="log-uniform"),
+            },
+        ),
+        "RandomForestClassifier": (
+            RandomForestClassifier(random_state=RANDOM_SEED, n_jobs=HYPERPARAMETER_SEARCH_JOBS),
+            {
+                "n_estimators": Integer(100, 2500),
+                "max_depth": Categorical([None, 4, 8, 12, 20, 40, 80]),
+                "min_samples_split": Integer(2, 200),
+                "min_samples_leaf": Integer(1, 100),
+                "max_features": Real(0.05, 1.0),
+                "bootstrap": Categorical([True, False]),
+                "criterion": Categorical(["gini", "entropy", "log_loss"]),
+                "class_weight": Categorical([None, "balanced"]),
+            },
+        ),
         "DecisionTreeClassifier": (
             DecisionTreeClassifier(random_state=RANDOM_SEED),
             {
@@ -73,40 +73,40 @@ def build_searches():
                 "ccp_alpha": Real(1e-10, 1.0, prior="log-uniform"),
             },
         ),
-        # "HistGradientBoostingClassifier": (
-        #     HistGradientBoostingClassifier(random_state=RANDOM_SEED),
-        #     {
-        #         "learning_rate": Real(1e-3, 0.5, prior="log-uniform"),
-        #         "max_iter": Integer(100, 3000),
-        #         "max_depth": Categorical([None, 2, 3, 5, 8, 12, 20]),
-        #         "max_leaf_nodes": Integer(7, 255),
-        #         "min_samples_leaf": Integer(2, 500),
-        #         "l2_regularization": Real(1e-10, 100.0, prior="log-uniform"),
-        #         "max_features": Real(0.2, 1.0),
-        #         "class_weight": Categorical([None, "balanced"]),
-        #     },
-        # ),
-        # "XGBClassifier": (
-        #     XGBClassifier(
-        #         random_state=RANDOM_SEED,
-        #         n_jobs=HYPERPARAMETER_SEARCH_JOBS,
-        #         objective="multi:softprob",
-        #         eval_metric="mlogloss",
-        #         tree_method="hist",
-        #     ),
-        #     {
-        #         "n_estimators": Integer(100, 3000),
-        #         "learning_rate": Real(1e-3, 0.5, prior="log-uniform"),
-        #         "max_depth": Integer(2, 20),
-        #         "min_child_weight": Integer(1, 50),
-        #         "subsample": Real(0.3, 1.0),
-        #         "colsample_bytree": Real(0.3, 1.0),
-        #         "gamma": Real(1e-10, 10.0, prior="log-uniform"),
-        #         "reg_alpha": Real(1e-10, 100.0, prior="log-uniform"),
-        #         "reg_lambda": Real(1e-3, 100.0, prior="log-uniform"),
-        #         "grow_policy": Categorical(["depthwise", "lossguide"]),
-        #     },
-        # ),
+        "HistGradientBoostingClassifier": (
+            HistGradientBoostingClassifier(random_state=RANDOM_SEED),
+            {
+                "learning_rate": Real(1e-3, 0.5, prior="log-uniform"),
+                "max_iter": Integer(100, 3000),
+                "max_depth": Categorical([None, 2, 3, 5, 8, 12, 20]),
+                "max_leaf_nodes": Integer(7, 255),
+                "min_samples_leaf": Integer(2, 500),
+                "l2_regularization": Real(1e-10, 100.0, prior="log-uniform"),
+                "max_features": Real(0.2, 1.0),
+                "class_weight": Categorical([None, "balanced"]),
+            },
+        ),
+        "XGBClassifier": (
+            XGBClassifier(
+                random_state=RANDOM_SEED,
+                n_jobs=HYPERPARAMETER_SEARCH_JOBS,
+                objective="multi:softprob",
+                eval_metric="mlogloss",
+                tree_method="hist",
+            ),
+            {
+                "n_estimators": Integer(100, 3000),
+                "learning_rate": Real(1e-3, 0.5, prior="log-uniform"),
+                "max_depth": Integer(2, 20),
+                "min_child_weight": Integer(1, 50),
+                "subsample": Real(0.3, 1.0),
+                "colsample_bytree": Real(0.3, 1.0),
+                "gamma": Real(1e-10, 10.0, prior="log-uniform"),
+                "reg_alpha": Real(1e-10, 100.0, prior="log-uniform"),
+                "reg_lambda": Real(1e-3, 100.0, prior="log-uniform"),
+                "grow_policy": Categorical(["depthwise", "lossguide"]),
+            },
+        ),
     }
 
 

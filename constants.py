@@ -12,8 +12,8 @@ RANDOM_SEED = 42
 HYPERPARAMETER_SEARCH_ROWS = None
 HYPERPARAMETER_SEARCH_ITERATIONS = 20
 HYPERPARAMETER_SEARCH_FOLDS = 3
-HYPERPARAMETER_SEARCH_JOBS = -1
-VALIDATION_SIZE = 0.2
+HYPERPARAMETER_SEARCH_JOBS = 11
+VALIDATION_SIZE = 0.95
 
 ID_COLUMN = "id"
 TEXT_COLUMN = "post"
@@ -30,18 +30,57 @@ PHRASE_GROUPS = {
     "jquery": ("$(", ".click", ".on(", ".ajax"),
     "angularjs": ("ng-", "$scope", "$http", "directive"),
     "php": ("<?php", "$_post", "mysqli", "echo"),
-    "c#": ("using", "namespace", "console.writeline", "linq"),
-    "c++": ("std::", "cout", "endl", "template"),
+    "c#": (
+        "using",
+        "namespace",
+        "console.writeline",
+        "linq",
+        "console.readline();",
+        "console.write(",
+        "system.text;",
+        "messagebox.show(",
+        "get;",
+        "set;",
+        "///",
+        "system;",
+    ),
+    "c++": ("std::", "cout", "endl", "template", "::", "endl;"),
     "c": ("printf", "malloc", "scanf", "#include"),
-    "objective-c": ("@interface", "@implementation", "nsstring", "[self"),
+    "objective-c": (
+        "@interface",
+        "@implementation",
+        "nsstring",
+        "[self",
+        "setenv",
+        "&lt;foundation/foundation.h&gt;",
+        "imageview.image",
+        "[[nsautoreleasepool",
+        "nsobject",
+        "objective",
+        "161",
+        "<pre><code>@interface",
+        "@end",
+        "@property",
+    ),
     "ios": ("uiviewcontroller", "storyboard", "xcode", "uibutton"),
     "iphone": ("uiviewcontroller", "storyboard", "xcode", "uibutton"),
-    "android": ("activity", "intent", "xml", "setcontentview", "fragment"),
+    "android": (
+        "activity",
+        "intent",
+        "xml",
+        "setcontentview",
+        "fragment",
+        "android:layout_width=",
+        "android:layout_height=",
+        "wrap_content",
+        "android:id=",
+        "match_parent",
+    ),
     "sql": ("select", "join", "group by", "index"),
     "mysql": ("mysql", "sqlstate"),
     "html": ("<div", "<form", "<table", "doctype"),
     "css": ("padding", "margin", "display:", "position:", "float:"),
-    "ruby-on-rails": ("activerecord", "migration", "routes", "gem", "bundle"),
+    "ruby-on-rails": ("activerecord", "migration", "routes", "gem", "bundle", "has_many"),
 }
 
 PHRASE_FEATURES = tuple(dict.fromkeys(phrase for phrases in PHRASE_GROUPS.values() for phrase in phrases))
