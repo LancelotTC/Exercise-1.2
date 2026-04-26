@@ -10,7 +10,7 @@ PREDICTIONS_DIR = Path("predictions")
 VECTOR_POST_LIMIT = None
 RANDOM_SEED = 42
 HYPERPARAMETER_SEARCH_ROWS = None
-HYPERPARAMETER_SEARCH_ITERATIONS = 60
+HYPERPARAMETER_SEARCH_ITERATIONS = 20
 HYPERPARAMETER_SEARCH_FOLDS = 3
 HYPERPARAMETER_SEARCH_JOBS = -1
 VALIDATION_SIZE = 0.2
@@ -23,27 +23,28 @@ PREDICTED_TAG_COLUMN = "predicted_tag"
 PREDICTED_PROBABILITY_COLUMN = "predicted_probability"
 IS_CORRECT_COLUMN = "is_correct"
 
-PHRASE_FEATURES = (
-    # Add any phrases here to create one binary vector column per phrase.
-    "public static",
-    "system.out.println",
-    "select * from",
-    "__name__",
-    "__main__",
-    "decorator",
-    "numpy",
-    "pandas",
-    "@media",
-    "directive",
-    "ng-",
-    "<?php",
-    "microsoft",
-    "apple",
-    "cout",
-    "system.out",
-    "manifest",
-    "compile",
-)
+PHRASE_GROUPS = {
+    "python": ("def", "import", "traceback", "pip", "django", "pandas"),
+    "java": ("public class", "system.out", "jvm", "spring", "maven"),
+    "javascript": ("function", "document.", "node", "npm", "promise"),
+    "jquery": ("$(", ".click", ".on(", ".ajax"),
+    "angularjs": ("ng-", "$scope", "$http", "directive"),
+    "php": ("<?php", "$_post", "mysqli", "echo"),
+    "c#": ("using", "namespace", "console.writeline", "linq"),
+    "c++": ("std::", "cout", "endl", "template"),
+    "c": ("printf", "malloc", "scanf", "#include"),
+    "objective-c": ("@interface", "@implementation", "nsstring", "[self"),
+    "ios": ("uiviewcontroller", "storyboard", "xcode", "uibutton"),
+    "iphone": ("uiviewcontroller", "storyboard", "xcode", "uibutton"),
+    "android": ("activity", "intent", "xml", "setcontentview", "fragment"),
+    "sql": ("select", "join", "group by", "index"),
+    "mysql": ("mysql", "sqlstate"),
+    "html": ("<div", "<form", "<table", "doctype"),
+    "css": ("padding", "margin", "display:", "position:", "float:"),
+    "ruby-on-rails": ("activerecord", "migration", "routes", "gem", "bundle"),
+}
+
+PHRASE_FEATURES = tuple(dict.fromkeys(phrase for phrases in PHRASE_GROUPS.values() for phrase in phrases))
 
 ALTERNATIVE_CLASS_SPELLINGS = {
     ".net": ("dotnet", "dot net"),
@@ -64,6 +65,9 @@ ALTERNATIVE_CLASS_SPELLINGS = {
     "objective-c": ("objective c", "objectivec"),
     "php": (),
     "python": (),
-    "ruby-on-rails": ("ruby on rails", "rubyonrails"),
+    "ruby-on-rails": (
+        "ruby on rails",
+        "rubyonrails",
+    ),
     "sql": (),
 }

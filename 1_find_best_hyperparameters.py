@@ -59,20 +59,20 @@ def build_searches():
         #         "class_weight": Categorical([None, "balanced"]),
         #     },
         # ),
-        # "DecisionTreeClassifier": (
-        #     DecisionTreeClassifier(random_state=RANDOM_SEED),
-        #     {
-        #         "criterion": Categorical(["gini", "entropy", "log_loss"]),
-        #         "splitter": Categorical(["best", "random"]),
-        #         "max_depth": Categorical([None, 2, 4, 6, 8, 12, 20, 40, 80]),
-        #         "min_samples_split": Integer(2, 500),
-        #         "min_samples_leaf": Integer(1, 250),
-        #         "max_features": Categorical([None, "sqrt", "log2"]),
-        #         "class_weight": Categorical([None, "balanced"]),
-        #         "min_impurity_decrease": Real(0.0, 0.05),
-        #         "ccp_alpha": Real(1e-10, 1.0, prior="log-uniform"),
-        #     },
-        # ),
+        "DecisionTreeClassifier": (
+            DecisionTreeClassifier(random_state=RANDOM_SEED),
+            {
+                "criterion": Categorical(["gini", "entropy", "log_loss"]),
+                "splitter": Categorical(["best", "random"]),
+                "max_depth": Categorical([None, 2, 4, 6, 8, 12, 20, 40, 80]),
+                "min_samples_split": Integer(2, 500),
+                "min_samples_leaf": Integer(1, 250),
+                "max_features": Categorical([None, "sqrt", "log2"]),
+                "class_weight": Categorical([None, "balanced"]),
+                "min_impurity_decrease": Real(0.0, 0.05),
+                "ccp_alpha": Real(1e-10, 1.0, prior="log-uniform"),
+            },
+        ),
         # "HistGradientBoostingClassifier": (
         #     HistGradientBoostingClassifier(random_state=RANDOM_SEED),
         #     {
@@ -86,27 +86,27 @@ def build_searches():
         #         "class_weight": Categorical([None, "balanced"]),
         #     },
         # ),
-        "XGBClassifier": (
-            XGBClassifier(
-                random_state=RANDOM_SEED,
-                n_jobs=HYPERPARAMETER_SEARCH_JOBS,
-                objective="multi:softprob",
-                eval_metric="mlogloss",
-                tree_method="hist",
-            ),
-            {
-                "n_estimators": Integer(100, 3000),
-                "learning_rate": Real(1e-3, 0.5, prior="log-uniform"),
-                "max_depth": Integer(2, 20),
-                "min_child_weight": Integer(1, 50),
-                "subsample": Real(0.3, 1.0),
-                "colsample_bytree": Real(0.3, 1.0),
-                "gamma": Real(1e-10, 10.0, prior="log-uniform"),
-                "reg_alpha": Real(1e-10, 100.0, prior="log-uniform"),
-                "reg_lambda": Real(1e-3, 100.0, prior="log-uniform"),
-                "grow_policy": Categorical(["depthwise", "lossguide"]),
-            },
-        ),
+        # "XGBClassifier": (
+        #     XGBClassifier(
+        #         random_state=RANDOM_SEED,
+        #         n_jobs=HYPERPARAMETER_SEARCH_JOBS,
+        #         objective="multi:softprob",
+        #         eval_metric="mlogloss",
+        #         tree_method="hist",
+        #     ),
+        #     {
+        #         "n_estimators": Integer(100, 3000),
+        #         "learning_rate": Real(1e-3, 0.5, prior="log-uniform"),
+        #         "max_depth": Integer(2, 20),
+        #         "min_child_weight": Integer(1, 50),
+        #         "subsample": Real(0.3, 1.0),
+        #         "colsample_bytree": Real(0.3, 1.0),
+        #         "gamma": Real(1e-10, 10.0, prior="log-uniform"),
+        #         "reg_alpha": Real(1e-10, 100.0, prior="log-uniform"),
+        #         "reg_lambda": Real(1e-3, 100.0, prior="log-uniform"),
+        #         "grow_policy": Categorical(["depthwise", "lossguide"]),
+        #     },
+        # ),
     }
 
 

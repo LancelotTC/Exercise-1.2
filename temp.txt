@@ -1,0 +1,38 @@
+python:
+__name__ __main__
+decorator
+numpy
+pandas
+
+css:
+.something-
+@media
+
+angular:
+directive
+ng-
+
+php:
+<?php
+
+
+asp.net:
+microsoft
+
+iphone, ios:
+apple
+
+c++:
+cout 98%
+
+java:
+system.out
+
+android:
+manifest
+
+compile
+
+
+find words that only occur in certain classes
+whether present -> how many times present

@@ -11,8 +11,7 @@ from constants import (
     VECTOR_POST_LIMIT,
     VECTORS_FILE,
 )
-from utils import Post, load_dataset
-
+from utils import Post, load_dataset, count
 
 TOP_TAG_LIMIT = 10
 TOP_WORD_LIMIT = 10
@@ -66,10 +65,28 @@ class FeatureExtraction:
         return int(any(FeatureExtraction.mentions_tag(text, spelling) for spelling in spellings))
 
     @staticmethod
+    def count_exclusive_words(text: str, words: list[str]):
+        text_words = FeatureExtraction.unique_words(text)
+        return count(word in text_words for word in words)
+
+    @staticmethod
+    def count_alternative_spelling(text: str, spellings: tuple[str, ...]):
+        return count(FeatureExtraction.mentions_tag(text, spelling) for spelling in spellings)
+
+    @staticmethod
     def contains_phrase(text: str, phrase: str):
         normalized_text = FeatureExtraction.normalize(text)
         normalized_phrase = FeatureExtraction.normalize(phrase)
-        return int(bool(normalized_phrase) and normalized_phrase in normalized_text)
+
+        if not normalized_phrase:
+            return 0
+
+        starts_with_word = normalized_phrase[0].isalnum()
+        ends_with_word = normalized_phrase[-1].isalnum()
+        left_boundary = r"(?<![a-z0-9])" if starts_with_word else ""
+        right_boundary = r"(?![a-z0-9])" if ends_with_word else ""
+        pattern = f"{left_boundary}{re.escape(normalized_phrase)}{right_boundary}"
+        return int(bool(re.search(pattern, normalized_text)))
 
 
 def feature_name(name: str):
@@ -129,18 +146,16 @@ def build_vector_row(
     for tag in all_tags:
         row[f"contains_class__{feature_name(tag)}"] = FeatureExtraction.mentions_tag(post.post, tag)
 
-    for tag in all_tags:
-        row[f"contains_exclusive_words__{feature_name(tag)}"] = FeatureExtraction.has_exclusive_words(
+        row[f"count_exclusive_words__{feature_name(tag)}"] = FeatureExtraction.count_exclusive_words(
             post.post, exclusive_words_by_tag[tag]
         )
 
-    for tag in all_tags:
-        row[f"contains_alternative_spelling__{feature_name(tag)}"] = FeatureExtraction.has_alternative_spelling(
+        row[f"count_alternative_spelling__{feature_name(tag)}"] = FeatureExtraction.has_alternative_spelling(
             post.post, ALTERNATIVE_CLASS_SPELLINGS[tag]
         )
 
     for phrase in PHRASE_FEATURES:
-        row[f"contains_phrase__{feature_name(phrase)}"] = FeatureExtraction.contains_phrase(post.post, phrase)
+        row[f"count_phrase__{feature_name(phrase)}"] = FeatureExtraction.contains_phrase(post.post, phrase)
 
     return row
 

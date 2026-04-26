@@ -71,9 +71,7 @@ def load_vectors_frame() -> pd.DataFrame:
     required_columns = {ID_COLUMN, TARGET_COLUMN}
     missing_columns = required_columns - set(dataframe.columns)
     if missing_columns:
-        raise RuntimeError(
-            f"Vector dataset is missing required columns: {', '.join(sorted(missing_columns))}."
-        )
+        raise RuntimeError(f"Vector dataset is missing required columns: {', '.join(sorted(missing_columns))}.")
 
     return dataframe
 
@@ -126,3 +124,23 @@ def save_json_file(path: str | Path, payload: Any) -> None:
 
 def load_hyperparameter_results() -> dict[str, object]:
     return load_json_file(HYPERPARAMETERS_FILE, {})
+
+
+def count[T](
+    __iterable: Iterable[T],
+    __callable: Optional[Callable[[T], bool]] = None,
+    if_empty: int = 0,
+) -> int:
+    """Takes in a Callable object and iterables,
+    and returns the count of how many of the iterables
+    returns True when passed in inside the Callable.
+    Basically any or all but it returns how many of them returned True instead of a bool
+    """
+
+    if not __iterable:
+        return if_empty
+
+    if __callable is None:
+        return sum(1 for item in __iterable if item)
+
+    return sum(1 for item in __iterable if __callable(item))
