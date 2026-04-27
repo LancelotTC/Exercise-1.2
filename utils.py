@@ -1,3 +1,4 @@
+import importlib.util
 import json
 import os
 from collections.abc import Callable, Iterable
@@ -53,14 +54,25 @@ def load_dataset() -> list[Post]:
     return [Post(**post) for post in dataframe.to_dict(orient="records")]
 
 
+def load_vector_generation_module():
+    module_path = Path(__file__).with_name("1_generate_vectors.py")
+    spec = importlib.util.spec_from_file_location("pipeline_generate_vectors", module_path)
+
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Could not load vector generation module from '{module_path}'.")
+
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def ensure_vectors_file() -> Path:
     if VECTORS_FILE.exists():
         return VECTORS_FILE
 
-    from generate_vectors import write_vectors
-
+    vector_module = load_vector_generation_module()
     posts = load_dataset()
-    write_vectors(posts, posts, VECTORS_FILE)
+    vector_module.write_vectors(posts, posts, VECTORS_FILE)
     return VECTORS_FILE
 
 

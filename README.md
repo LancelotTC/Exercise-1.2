@@ -2,15 +2,15 @@
 
 Classifies Stack Overflow posts into one of 20 tags from manual text features plus TF-IDF.
 
-## Pipeline
+## Setup
 
-### 0. Install dependencies
+### Install dependencies
 
 ```powershell
 python -m pip install -r requirements.txt
 ```
 
-### 1. Prepare the dataset
+### Prepare the dataset
 
 Input file: `data/stack-overflow-data.csv`
 
@@ -29,10 +29,27 @@ If `id` is missing and you want to persist it in the dataset:
 python add_dataset_ids.py
 ```
 
-### 2. Generate vectors
+## Pipeline
+
+### 0. Run statistics
 
 ```powershell
-python generate_vectors.py
+python 0_statistics.py
+```
+
+This step writes:
+
+- class distribution plots
+- tag mention plots
+- top-word plots for every class
+- exclusive-word summaries
+- phrase presence summaries and plots
+- word occurrence ratio CSVs and plots
+
+### 1. Generate vectors
+
+```powershell
+python 1_generate_vectors.py
 ```
 
 This writes `data/stack-overflow-vectors.csv`.
@@ -48,10 +65,10 @@ Current feature groups:
 - `count_special_chars`
 - TF-IDF features
 
-### 3. Search best hyperparameters
+### 2. Search best hyperparameters
 
 ```powershell
-python 1_find_best_hyperparameters.py
+python 2_find_best_hyperparameters.py
 ```
 
 This step:
@@ -61,12 +78,12 @@ This step:
 - uses `DeltaYStopper`
 - writes results to `hyperparameters.json`
 
-Note: the search space is defined directly in `1_find_best_hyperparameters.py`. Right now only `LogisticRegression` is enabled there.
+Note: the search space is defined directly in `2_find_best_hyperparameters.py`. Right now only `LogisticRegression` is enabled there.
 
-### 4. Run individual model predictions
+### 3. Run individual model predictions
 
 ```powershell
-python 2_individual_predictions.py
+python 3_individual_predictions.py
 ```
 
 This step:
@@ -80,10 +97,10 @@ This step:
 
 Outputs go to `predictions/<ModelName>/`.
 
-### 5. Run ensemble predictions
+### 4. Run ensemble predictions
 
 ```powershell
-python 3_stacking_predictions.py
+python 4_stacking_classifiers.py
 ```
 
 This step combines tuned base models with:
@@ -94,22 +111,15 @@ This step combines tuned base models with:
 
 Outputs go to `predictions/<EnsembleName>/`.
 
-## Side Analysis Scripts
-
-These are not part of the main training pipeline:
-
-- `statistics.py`: class distribution and word analysis plots
-- `phrase_presence_distribution.py`: top-3 class distribution for handpicked phrases
-- `word_occurrence_ratios.py`: words ranked by `occs_in_class / occs_in_others`
-
 ## Main Files
 
 - `constants.py`: paths and runtime settings
 - `utils.py`: dataset, vector, metadata, and JSON helpers
-- `generate_vectors.py`: feature extraction and vector export
-- `1_find_best_hyperparameters.py`: Bayesian hyperparameter search
-- `2_individual_predictions.py`: per-model prediction step
-- `3_stacking_predictions.py`: ensemble prediction step
+- `0_statistics.py`: analysis and plotting step
+- `1_generate_vectors.py`: feature extraction and vector export
+- `2_find_best_hyperparameters.py`: Bayesian hyperparameter search
+- `3_individual_predictions.py`: per-model prediction step
+- `4_stacking_classifiers.py`: ensemble prediction step
 
 ## Outputs
 

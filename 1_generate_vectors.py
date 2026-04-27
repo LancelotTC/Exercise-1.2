@@ -20,7 +20,6 @@ from constants import (
 from utils import Post, load_dataset, count
 
 
-TOP_TAG_LIMIT = 10
 TOP_WORD_LIMIT = 10
 EXCLUSIVE_WORD_LIMIT = 20
 
@@ -155,7 +154,7 @@ def collect_feature_words(posts: list[Post]):
     all_tags = sorted(tag_counts)
     top_words_by_tag: dict[str, list[str]] = {}
 
-    for tag, _ in tag_counts.most_common(TOP_TAG_LIMIT):
+    for tag in all_tags:
         top_words_by_tag[tag] = [word for word, _ in top_word_counts[tag].most_common(TOP_WORD_LIMIT)]
 
     class_words = {tag: set(word_counts) for tag, word_counts in exclusive_word_counts.items()}
