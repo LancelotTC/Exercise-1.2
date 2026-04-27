@@ -59,8 +59,8 @@ Current feature groups:
 - `id`
 - `tags`
 - class mention indicators
-- exclusive-word counts per class
-- alternative-spelling counts per class
+- exclusive-word presence indicators per class
+- alternative-spelling presence indicators per class
 - phrase presence indicators from `PHRASE_GROUPS` in `constants.py`
 - `count_special_chars`
 - TF-IDF features
@@ -79,6 +79,7 @@ This step:
 - writes results to `hyperparameters.json`
 
 Note: the search space is defined directly in `2_find_best_hyperparameters.py`. Right now only `LogisticRegression` is enabled there.
+If you change the vector schema, rerun this step before steps 3 or 4.
 
 ### 3. Run individual model predictions
 
@@ -105,6 +106,7 @@ python 4_stacking_classifiers.py
 
 This step combines tuned base models with:
 
+- `StackingClassifier`
 - `StackingClassifierPassthrough`
 - `SoftVotingClassifier`
 - `HardVotingClassifier`

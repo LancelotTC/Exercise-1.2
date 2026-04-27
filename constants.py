@@ -13,7 +13,7 @@ TFIDF_MIN_DF = 2
 TFIDF_MAX_DF = 0.95
 TFIDF_NGRAM_RANGE = (1, 2)
 RANDOM_SEED = 42
-HYPERPARAMETER_SEARCH_ROWS = None
+HYPERPARAMETER_SEARCH_ROWS = 40_000
 HYPERPARAMETER_SEARCH_ITERATIONS = 20
 HYPERPARAMETER_SEARCH_FOLDS = 3
 HYPERPARAMETER_SEARCH_JOBS = 11
@@ -36,6 +36,7 @@ PHRASE_GROUPS = {
     "javascript": ("function", "document.", "node", "npm", "promise"),
     "jquery": ("$(", ".click", ".on(", ".ajax"),
     "angularjs": ("ng-", "$scope", "$http", "directive"),
+    "asp.net": ("runat=", "viewstate", "postback", "gridview"),
     "php": ("<?php", "$_post", "mysqli", "echo"),
     "c#": (
         "using",
@@ -63,8 +64,6 @@ PHRASE_GROUPS = {
         "imageview.image",
         "[[nsautoreleasepool",
         "nsobject",
-        "objective",
-        "161",
         "<pre><code>@interface",
         "@end",
         "@property",
@@ -87,7 +86,7 @@ PHRASE_GROUPS = {
     "mysql": ("mysql", "sqlstate"),
     "html": ("<div", "<form", "<table", "doctype"),
     "css": ("padding", "margin", "display:", "position:", "float:"),
-    "ruby-on-rails": ("activerecord", "migration", "routes", "gem", "bundle", "has_many", "rails", "rail"),
+    "ruby-on-rails": ("activerecord", "migration", "routes", "gem", "bundle", "has_many", "rails"),
 }
 
 PHRASE_FEATURES = tuple(dict.fromkeys(phrase for phrases in PHRASE_GROUPS.values() for phrase in phrases))

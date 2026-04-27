@@ -1,7 +1,4 @@
-attrs
 tqdm
-word2number
-num2words
 spacy
 unidecode
 pandas

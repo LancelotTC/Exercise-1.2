@@ -1,11 +1,13 @@
 import importlib.util
+import hashlib
 import json
 import os
 from collections.abc import Callable, Iterable
+from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Optional
 
-import attrs
 import pandas as pd
 
 from constants import (
@@ -19,7 +21,7 @@ from constants import (
 )
 
 
-@attrs.define
+@dataclass(slots=True)
 class Post:
     id: Optional[int] = None
     post: str = ""
@@ -28,15 +30,6 @@ class Post:
     def apply(self, func: Callable[[str], str]):
         self.post = func(self.post)
         self.tags = func(self.tags)
-
-
-def average(numbers: Iterable[int | float], key: Optional[Callable] = lambda x: x):
-    """Returns average of all numerical values in a one-dimensional Iterable or Mapping-like object"""
-
-    if not isinstance(numbers, Iterable) or isinstance(numbers, str):
-        raise TypeError(f"Expected object of type Iterable, got {type(numbers).__name__}")
-
-    return sum((key(n) for n in numbers)) / len(numbers)
 
 
 def load_posts_frame() -> pd.DataFrame:
@@ -54,6 +47,7 @@ def load_dataset() -> list[Post]:
     return [Post(**post) for post in dataframe.to_dict(orient="records")]
 
 
+@lru_cache(maxsize=1)
 def load_vector_generation_module():
     module_path = Path(__file__).with_name("1_generate_vectors.py")
     spec = importlib.util.spec_from_file_location("pipeline_generate_vectors", module_path)
@@ -64,6 +58,28 @@ def load_vector_generation_module():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def get_feature_signature(column_names: Iterable[str]) -> str:
+    joined_names = "\n".join(column_names)
+    return hashlib.sha256(joined_names.encode("utf-8")).hexdigest()
+
+
+def hyperparameter_result_matches(
+    result: dict[str, Any],
+    feature_columns: list[str] | pd.Index,
+    training_rows: int | None = None,
+) -> bool:
+    if result.get("feature_columns") != len(feature_columns):
+        return False
+
+    if result.get("feature_signature") != get_feature_signature(feature_columns):
+        return False
+
+    if training_rows is not None and result.get("training_rows") != training_rows:
+        return False
+
+    return True
 
 
 def ensure_vectors_file() -> Path:
@@ -136,23 +152,3 @@ def save_json_file(path: str | Path, payload: Any) -> None:
 
 def load_hyperparameter_results() -> dict[str, object]:
     return load_json_file(HYPERPARAMETERS_FILE, {})
-
-
-def count[T](
-    __iterable: Iterable[T],
-    __callable: Optional[Callable[[T], bool]] = None,
-    if_empty: int = 0,
-) -> int:
-    """Takes in a Callable object and iterables,
-    and returns the count of how many of the iterables
-    returns True when passed in inside the Callable.
-    Basically any or all but it returns how many of them returned True instead of a bool
-    """
-
-    if not __iterable:
-        return if_empty
-
-    if __callable is None:
-        return sum(1 for item in __iterable if item)
-
-    return sum(1 for item in __iterable if __callable(item))

@@ -1,4 +1,3 @@
-import math
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -7,7 +6,7 @@ import matplotlib.ticker as mtick
 import pandas as pd
 
 from constants import PHRASE_GROUPS
-from utils import average, load_dataset, load_vector_generation_module
+from utils import load_dataset, load_vector_generation_module
 
 vector_module = load_vector_generation_module()
 FeatureExtraction = vector_module.FeatureExtraction
@@ -55,7 +54,7 @@ def tag_is_in_text(text: str, tag: str):
 
 def analyze_tag_distribution(dataframe: pd.DataFrame):
     print("\n==== TAG EXPLORATION ====")
-    print("\nAverage number of tags per question:", average(dataframe["num_tags"]))
+    print("\nAverage number of tags per question:", dataframe["num_tags"].mean())
     print("Max number of tags:", dataframe["num_tags"].max())
 
     tag_counts = Counter(dataframe["tags"])
@@ -354,15 +353,9 @@ def build_ratio_frame(word_counts_by_class, total_word_counts):
 def plot_word_ratio_groups(top_frame: pd.DataFrame):
     for tag, group in top_frame.groupby("tag", sort=False):
         group = group.reset_index(drop=True)
-        max_finite_ratio = max((ratio for ratio in group["ratio"] if not math.isinf(ratio)), default=0.0)
-        plot_ceiling = max_finite_ratio * 1.1 if max_finite_ratio > 0 else 1.0
-        plot_values = [plot_ceiling if math.isinf(ratio) else ratio for ratio in group["ratio"]]
         labels = [word for word in group["word"]][::-1]
-        values = plot_values[::-1]
-        ratio_labels = [
-            "inf" if math.isinf(ratio) else f"{ratio:.2f}"
-            for ratio in group["ratio"]
-        ][::-1]
+        values = [float(ratio) for ratio in group["ratio"]][::-1]
+        ratio_labels = [f"{ratio:.2f}" for ratio in group["ratio"]][::-1]
 
         figure_height = max(5, len(labels) * 0.35)
         figure, axis = plt.subplots(figsize=(10, figure_height))
@@ -389,22 +382,22 @@ def analyze_word_occurrence_ratios(posts):
     print("\n==== WORD OCCURRENCE RATIOS ====")
     word_counts_by_class, total_word_counts = collect_word_counts(posts)
     ratio_frame = build_ratio_frame(word_counts_by_class, total_word_counts)
+    finite_ratio_frame = ratio_frame[ratio_frame["occs_in_others"] > 0].copy()
 
     all_rows_path = WORD_RATIO_OUTPUT_DIR / "word_occurrence_ratios_all.csv"
     top_rows_path = WORD_RATIO_OUTPUT_DIR / "word_occurrence_ratios_top.csv"
 
     ratio_frame.to_csv(all_rows_path, index=False)
-    top_frame = ratio_frame.groupby("tag", sort=False).head(30).copy()
+    top_frame = finite_ratio_frame.groupby("tag", sort=False).head(30).copy()
     top_frame.to_csv(top_rows_path, index=False)
     plot_word_ratio_groups(top_frame)
 
     for tag, group in top_frame.groupby("tag", sort=False):
         print(f"\n--- {tag} ---")
         for row in group.itertuples(index=False):
-            ratio = "inf" if math.isinf(row.ratio) else f"{row.ratio:.4f}"
             print(
                 f"{row.word}: occs_in_class={row.occs_in_class}, "
-                f"occs_in_others={row.occs_in_others}, ratio={ratio}"
+                f"occs_in_others={row.occs_in_others}, ratio={row.ratio:.4f}"
             )
 
     print(f"\nWrote word occurrence ratios to {all_rows_path}")

@@ -1,8 +1,11 @@
+import json
+import re
+from dataclasses import asdict
+
 import spacy
 from tqdm import tqdm
-import re, json, attrs
-from constants import *
-from utils import average, load_dataset, Post
+from constants import DATA_FOLDER
+from utils import load_dataset
 from unidecode import unidecode as no_accents
 from nltk.stem.snowball import SnowballStemmer
 
@@ -70,6 +73,6 @@ if __name__ == "__main__":
 
     with open("results.json", "w", encoding="utf-8") as file:
         json.dump(
-            [attrs.asdict(post) for post in posts],
+            [asdict(post) for post in posts],
             file,
         )

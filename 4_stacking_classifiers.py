@@ -14,7 +14,6 @@ from sklearn.metrics import (
     recall_score,
 )
 from sklearn.model_selection import StratifiedKFold, train_test_split
-from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import LabelEncoder
 from sklearn.tree import DecisionTreeClassifier
 from xgboost import XGBClassifier
@@ -29,42 +28,34 @@ from constants import (
     TRUE_TAG_COLUMN,
     VALIDATION_SIZE,
 )
-from utils import load_hyperparameter_results, load_modeling_data
+from utils import hyperparameter_result_matches, load_hyperparameter_results, load_modeling_data
 
 
 STACKING_FOLDS = 3
-MODEL_ORDER = [
+SUPPORTED_MODEL_NAMES = (
     "LogisticRegression",
     "DecisionTreeClassifier",
-    "KNeighborsClassifier",
-    # "XGBClassifier",
-]
-MODEL_ALIASES = {
-    "LogisticRegression": "lr",
-    "DecisionTreeClassifier": "dt",
-    "KNeighborsClassifier": "knn",
-    # "XGBClassifier": "xgb",
-}
+    "XGBClassifier",
+)
 
 
 def build_model(model_name: str, best_params: dict):
-    if model_name == "LogisticRegression":
-        return LogisticRegression(max_iter=4000, random_state=RANDOM_SEED, **best_params)
-    if model_name == "DecisionTreeClassifier":
-        return DecisionTreeClassifier(random_state=RANDOM_SEED, **best_params)
-    if model_name == "KNeighborsClassifier":
-        return KNeighborsClassifier(n_jobs=-1, **best_params)
-    # if model_name == "XGBClassifier":
-    #     return XGBClassifier(
-    #         random_state=RANDOM_SEED,
-    #         n_jobs=-1,
-    #         objective="multi:softprob",
-    #         eval_metric="mlogloss",
-    #         tree_method="hist",
-    #         **best_params,
-    #     )
-
-    raise RuntimeError(f"Unsupported model '{model_name}' in {HYPERPARAMETERS_FILE}.")
+    match model_name:
+        case "LogisticRegression":
+            return LogisticRegression(max_iter=4000, random_state=RANDOM_SEED, **best_params)
+        case "DecisionTreeClassifier":
+            return DecisionTreeClassifier(random_state=RANDOM_SEED, **best_params)
+        case "XGBClassifier":
+            return XGBClassifier(
+                random_state=RANDOM_SEED,
+                n_jobs=-1,
+                objective="multi:softprob",
+                eval_metric="mlogloss",
+                tree_method="hist",
+                **best_params,
+            )
+        case _:
+            raise RuntimeError(f"Unsupported model '{model_name}' in {HYPERPARAMETERS_FILE}.")
 
 
 def ensemble_output_path(model_name: str, filename: str) -> Path:
@@ -79,11 +70,6 @@ def build_prediction_frame(metadata, predicted_tags, predicted_probabilities):
     output[PREDICTED_PROBABILITY_COLUMN] = predicted_probabilities
     output[IS_CORRECT_COLUMN] = output[TRUE_TAG_COLUMN] == output[PREDICTED_TAG_COLUMN]
     return output
-
-
-def write_prediction_file(path: Path, dataframe) -> Path:
-    dataframe.to_csv(path, index=False)
-    return path
 
 
 def macro_specificity_score(matrix) -> float:
@@ -155,32 +141,34 @@ def write_confusion_matrix_files(model_name: str, labels: list[str], metrics: di
     return matrix_csv_path, matrix_plot_path
 
 
-def build_base_estimators(results: dict):
-    estimator_names = [model_name for model_name in MODEL_ORDER if model_name in results]
+def estimator_name(model_name: str) -> str:
+    return "".join(character.lower() for character in model_name if character.isalnum())
 
-    if len(estimator_names) < 2:
-        raise RuntimeError("Need at least two tuned base models in hyperparameters.json for stacking ensembles.")
+
+def build_base_estimators(results: dict):
+    if len(results) < 2:
+        raise RuntimeError("Need at least two tuned models in hyperparameters.json for stacking ensembles.")
 
     return [
-        (MODEL_ALIASES[model_name], build_model(model_name, results[model_name]["best_params"]))
-        for model_name in estimator_names
+        (estimator_name(model_name), build_model(model_name, results[model_name]["best_params"]))
+        for model_name in results
     ]
 
 
 def build_ensemble_models(results: dict):
     cv = StratifiedKFold(n_splits=STACKING_FOLDS, shuffle=True, random_state=RANDOM_SEED)
-    meta_estimator = LogisticRegression(max_iter=4000, random_state=RANDOM_SEED, class_weight="balanced")
+    base_estimators = build_base_estimators(results)
 
     return {
-        # "StackingClassifier": StackingClassifier(
-        #     estimators=build_base_estimators(results),
-        #     final_estimator=meta_estimator,
-        #     stack_method="predict_proba",
-        #     cv=cv,
-        #     n_jobs=-1,
-        # ),
+        "StackingClassifier": StackingClassifier(
+            estimators=base_estimators,
+            final_estimator=LogisticRegression(max_iter=4000, random_state=RANDOM_SEED, class_weight="balanced"),
+            stack_method="predict_proba",
+            cv=cv,
+            n_jobs=-1,
+        ),
         "StackingClassifierPassthrough": StackingClassifier(
-            estimators=build_base_estimators(results),
+            estimators=base_estimators,
             final_estimator=LogisticRegression(max_iter=4000, random_state=RANDOM_SEED, class_weight="balanced"),
             stack_method="predict_proba",
             passthrough=True,
@@ -188,12 +176,12 @@ def build_ensemble_models(results: dict):
             n_jobs=-1,
         ),
         "SoftVotingClassifier": VotingClassifier(
-            estimators=build_base_estimators(results),
+            estimators=base_estimators,
             voting="soft",
             n_jobs=-1,
         ),
         "HardVotingClassifier": VotingClassifier(
-            estimators=build_base_estimators(results),
+            estimators=base_estimators,
             voting="hard",
             n_jobs=-1,
         ),
@@ -201,33 +189,47 @@ def build_ensemble_models(results: dict):
 
 
 def predict_with_confidence(model, features):
-    predicted_tags = model.predict(features)
+    predicted_labels = model.predict(features)
 
     if hasattr(model, "predict_proba"):
         probabilities = model.predict_proba(features)
-        return predicted_tags, probabilities.max(axis=1)
+        return predicted_labels, probabilities.max(axis=1)
 
     base_predictions = np.column_stack([estimator.predict(features) for estimator in model.estimators_])
-    vote_confidence = (base_predictions == predicted_tags[:, None]).mean(axis=1)
-    return predicted_tags, vote_confidence
+    vote_confidence = (base_predictions == predicted_labels[:, None]).mean(axis=1)
+    return predicted_labels, vote_confidence
+
+
+def load_compatible_results(feature_columns):
+    loaded_results = load_hyperparameter_results()
+    compatible_results = {}
+
+    for model_name in SUPPORTED_MODEL_NAMES:
+        if model_name not in loaded_results:
+            continue
+
+        result = loaded_results[model_name]
+        if hyperparameter_result_matches(result, feature_columns):
+            compatible_results[model_name] = result
+
+    return compatible_results
 
 
 def run_stacking_predictions():
-    results = load_hyperparameter_results()
     features, target, metadata = load_modeling_data()
-    results = {
-        model_name: results[model_name]
-        for model_name in MODEL_ORDER
-        if model_name in results and results[model_name].get("feature_columns") == len(features.columns)
-    }
-    if not results:
-        raise RuntimeError(f"No compatible hyperparameter results found in '{HYPERPARAMETERS_FILE}'.")
+    results = load_compatible_results(features.columns)
+
+    if len(results) < 2:
+        raise RuntimeError(
+            f"Need at least two compatible tuned models in '{HYPERPARAMETERS_FILE}' for stacking. "
+            "Run step 2 with more than one active model first."
+        )
 
     label_encoder = LabelEncoder()
     encoded_target = label_encoder.fit_transform(target)
     labels = list(label_encoder.classes_)
 
-    X_train, X_val, y_train, y_val, _, metadata_val = train_test_split(
+    train_features, validation_features, train_target, validation_target, _, validation_metadata = train_test_split(
         features,
         encoded_target,
         metadata,
@@ -237,21 +239,22 @@ def run_stacking_predictions():
     )
 
     print("Base models used:")
-    for model_name in [model_name for model_name in MODEL_ORDER if model_name in results]:
+    for model_name in results:
         print(f"- {model_name}")
 
     validation_models = build_ensemble_models(results)
     full_models = build_ensemble_models(results)
 
-    for ensemble_name, model in validation_models.items():
-        validation_codes, validation_probabilities = predict_with_confidence(model.fit(X_train, y_train), X_val)
-        validation_tags = label_encoder.inverse_transform(validation_codes.astype(int))
-        true_validation_tags = label_encoder.inverse_transform(y_val)
-        validation_output = build_prediction_frame(metadata_val, validation_tags, validation_probabilities)
-        validation_output_path = write_prediction_file(
-            ensemble_output_path(ensemble_name, f"{ensemble_name}_validation_preds.csv"),
-            validation_output,
+    for ensemble_name, validation_model in validation_models.items():
+        validation_codes, validation_probabilities = predict_with_confidence(
+            validation_model.fit(train_features, train_target),
+            validation_features,
         )
+        validation_tags = label_encoder.inverse_transform(validation_codes.astype(int))
+        true_validation_tags = label_encoder.inverse_transform(validation_target)
+        validation_output = build_prediction_frame(validation_metadata, validation_tags, validation_probabilities)
+        validation_output_path = ensemble_output_path(ensemble_name, f"{ensemble_name}_validation_preds.csv")
+        validation_output.to_csv(validation_output_path, index=False)
 
         validation_metrics = calculate_validation_metrics(labels, true_validation_tags, validation_tags)
         matrix_csv_path, matrix_plot_path = write_confusion_matrix_files(ensemble_name, labels, validation_metrics)
@@ -260,10 +263,8 @@ def run_stacking_predictions():
         all_codes, all_probabilities = predict_with_confidence(full_model.fit(features, encoded_target), features)
         all_tags = label_encoder.inverse_transform(all_codes.astype(int))
         all_output = build_prediction_frame(metadata, all_tags, all_probabilities)
-        all_output_path = write_prediction_file(
-            ensemble_output_path(ensemble_name, f"{ensemble_name}_all_rows_preds.csv"),
-            all_output,
-        )
+        all_output_path = ensemble_output_path(ensemble_name, f"{ensemble_name}_all_rows_preds.csv")
+        all_output.to_csv(all_output_path, index=False)
 
         print(f"\n{ensemble_name} validation accuracy: {validation_metrics['accuracy']:.4f}")
         print(f"{ensemble_name} validation macro precision: {validation_metrics['precision']:.4f}")

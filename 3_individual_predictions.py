@@ -12,7 +12,6 @@ from sklearn.metrics import (
     recall_score,
 )
 from sklearn.model_selection import train_test_split
-from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import LabelEncoder
 from sklearn.tree import DecisionTreeClassifier
 from xgboost import XGBClassifier
@@ -27,35 +26,38 @@ from constants import (
     TRUE_TAG_COLUMN,
     VALIDATION_SIZE,
 )
-from utils import load_hyperparameter_results, load_modeling_data
+from utils import (
+    get_feature_signature,
+    hyperparameter_result_matches,
+    load_hyperparameter_results,
+    load_modeling_data,
+)
 
 
-MODEL_ORDER = [
+SUPPORTED_MODEL_NAMES = (
     "LogisticRegression",
     "DecisionTreeClassifier",
-    "KNeighborsClassifier",
     "XGBClassifier",
-]
+)
 
 
 def build_model(model_name: str, best_params: dict):
-    if model_name == "LogisticRegression":
-        return LogisticRegression(max_iter=4000, random_state=RANDOM_SEED, **best_params)
-    if model_name == "DecisionTreeClassifier":
-        return DecisionTreeClassifier(random_state=RANDOM_SEED, **best_params)
-    if model_name == "KNeighborsClassifier":
-        return KNeighborsClassifier(n_jobs=-1, **best_params)
-    if model_name == "XGBClassifier":
-        return XGBClassifier(
-            random_state=RANDOM_SEED,
-            n_jobs=-1,
-            objective="multi:softprob",
-            eval_metric="mlogloss",
-            tree_method="hist",
-            **best_params,
-        )
-
-    raise RuntimeError(f"Unsupported model '{model_name}' in {HYPERPARAMETERS_FILE}.")
+    match model_name:
+        case "LogisticRegression":
+            return LogisticRegression(max_iter=4000, random_state=RANDOM_SEED, **best_params)
+        case "DecisionTreeClassifier":
+            return DecisionTreeClassifier(random_state=RANDOM_SEED, **best_params)
+        case "XGBClassifier":
+            return XGBClassifier(
+                random_state=RANDOM_SEED,
+                n_jobs=-1,
+                objective="multi:softprob",
+                eval_metric="mlogloss",
+                tree_method="hist",
+                **best_params,
+            )
+        case _:
+            raise RuntimeError(f"Unsupported model '{model_name}' in {HYPERPARAMETERS_FILE}.")
 
 
 def prediction_output_path(model_name: str, filename: str) -> Path:
@@ -70,11 +72,6 @@ def build_prediction_frame(metadata, predicted_tags, predicted_probabilities):
     output[PREDICTED_PROBABILITY_COLUMN] = predicted_probabilities
     output[IS_CORRECT_COLUMN] = output[TRUE_TAG_COLUMN] == output[PREDICTED_TAG_COLUMN]
     return output
-
-
-def write_prediction_file(path: Path, dataframe) -> Path:
-    dataframe.to_csv(path, index=False)
-    return path
 
 
 def macro_specificity_score(matrix) -> float:
@@ -153,32 +150,86 @@ def predict_with_confidence(model, features):
     return predicted_tags, predicted_probabilities
 
 
-def fit_and_predict(model_name: str, model, X_train, y_train, X_predict):
+def fit_and_predict(model_name: str, model, train_features, train_target, predict_features):
     if model_name != "XGBClassifier":
-        model.fit(X_train, y_train)
-        return predict_with_confidence(model, X_predict)
+        model.fit(train_features, train_target)
+        return predict_with_confidence(model, predict_features)
 
     encoder = LabelEncoder()
-    encoded_target = encoder.fit_transform(y_train)
-    model.fit(X_train, encoded_target)
-    predicted_probabilities = model.predict_proba(X_predict).max(axis=1)
-    predicted_tags = encoder.inverse_transform(model.predict(X_predict).astype(int))
+    encoded_target = encoder.fit_transform(train_target)
+    model.fit(train_features, encoded_target)
+    predicted_probabilities = model.predict_proba(predict_features).max(axis=1)
+    predicted_tags = encoder.inverse_transform(model.predict(predict_features).astype(int))
     return predicted_tags, predicted_probabilities
 
 
+def load_compatible_results(feature_columns):
+    loaded_results = load_hyperparameter_results()
+    compatible_results = {}
+
+    for model_name in SUPPORTED_MODEL_NAMES:
+        if model_name not in loaded_results:
+            continue
+
+        result = loaded_results[model_name]
+        if hyperparameter_result_matches(result, feature_columns):
+            compatible_results[model_name] = result
+
+    return compatible_results
+
+
+def build_incompatibility_message(feature_columns) -> str:
+    loaded_results = load_hyperparameter_results()
+    if not loaded_results:
+        return f"No saved results found in '{HYPERPARAMETERS_FILE}'. Run step 2 first."
+
+    current_feature_count = len(feature_columns)
+    current_feature_signature = get_feature_signature(feature_columns)
+    details = []
+
+    for model_name in SUPPORTED_MODEL_NAMES:
+        if model_name not in loaded_results:
+            continue
+
+        result = loaded_results[model_name]
+        reasons = []
+
+        saved_feature_count = result.get("feature_columns")
+        if saved_feature_count != current_feature_count:
+            reasons.append(f"feature_columns={saved_feature_count}, current={current_feature_count}")
+
+        saved_feature_signature = result.get("feature_signature")
+        if saved_feature_signature != current_feature_signature:
+            if saved_feature_signature is None:
+                reasons.append("missing feature_signature")
+            else:
+                reasons.append("feature_signature mismatch")
+
+        if not reasons:
+            reasons.append("unsupported or unknown mismatch")
+
+        details.append(f"{model_name}: " + "; ".join(reasons))
+
+    if not details:
+        return f"No compatible hyperparameter results found in '{HYPERPARAMETERS_FILE}'. " "Run step 2 first."
+
+    return (
+        f"No compatible hyperparameter results found in '{HYPERPARAMETERS_FILE}'.\n"
+        f"Current feature columns: {current_feature_count}\n"
+        f"Incompatibilities:\n- " + "\n- ".join(details) + "\n"
+        "Run step 2 again so the saved results match the current vector file."
+    )
+
+
 def run_individual_predictions():
-    results = load_hyperparameter_results()
     features, target, metadata = load_modeling_data()
-    results = {
-        model_name: results[model_name]
-        for model_name in MODEL_ORDER
-        if model_name in results and results[model_name].get("feature_columns") == len(features.columns)
-    }
+    results = load_compatible_results(features.columns)
+
     if not results:
-        raise RuntimeError(f"No compatible hyperparameter results found in '{HYPERPARAMETERS_FILE}'.")
+        raise RuntimeError(build_incompatibility_message(features.columns))
 
     labels = sorted(target.unique())
-    X_train, X_val, y_train, y_val, _, metadata_val = train_test_split(
+    train_features, validation_features, train_target, validation_target, _, validation_metadata = train_test_split(
         features,
         target,
         metadata,
@@ -189,23 +240,26 @@ def run_individual_predictions():
 
     for model_name, result in results.items():
         model = build_model(model_name, result["best_params"])
-        validation_tags, validation_probabilities = fit_and_predict(model_name, model, X_train, y_train, X_val)
-        validation_output = build_prediction_frame(metadata_val, validation_tags, validation_probabilities)
-        validation_output_path = write_prediction_file(
-            prediction_output_path(model_name, f"{model_name}_validation_preds.csv"),
-            validation_output,
+        validation_tags, validation_probabilities = fit_and_predict(
+            model_name,
+            model,
+            train_features,
+            train_target,
+            validation_features,
         )
 
-        validation_metrics = calculate_validation_metrics(labels, y_val, validation_tags)
+        validation_output = build_prediction_frame(validation_metadata, validation_tags, validation_probabilities)
+        validation_output_path = prediction_output_path(model_name, f"{model_name}_validation_preds.csv")
+        validation_output.to_csv(validation_output_path, index=False)
+
+        validation_metrics = calculate_validation_metrics(labels, validation_target, validation_tags)
         matrix_csv_path, matrix_plot_path = write_confusion_matrix_files(model_name, labels, validation_metrics)
 
         full_model = build_model(model_name, result["best_params"])
         all_tags, all_probabilities = fit_and_predict(model_name, full_model, features, target, features)
         all_output = build_prediction_frame(metadata, all_tags, all_probabilities)
-        all_output_path = write_prediction_file(
-            prediction_output_path(model_name, f"{model_name}_all_rows_preds.csv"),
-            all_output,
-        )
+        all_output_path = prediction_output_path(model_name, f"{model_name}_all_rows_preds.csv")
+        all_output.to_csv(all_output_path, index=False)
 
         print(f"{model_name} validation accuracy: {validation_metrics['accuracy']:.4f}")
         print(f"{model_name} validation macro precision: {validation_metrics['precision']:.4f}")

@@ -17,7 +17,7 @@ from constants import (
     VECTOR_POST_LIMIT,
     VECTORS_FILE,
 )
-from utils import Post, load_dataset, count
+from utils import Post, load_dataset
 
 
 TOP_WORD_LIMIT = 10
@@ -36,7 +36,8 @@ SPECIAL_FEATURE_NAMES = {
 class FeatureExtraction:
     STOP_WORDS = frozenset(
         word.strip() for word in ENGLISH_STOPWORDS_FILE.read_text(encoding="utf-8").splitlines() if word.strip()
-    )
+    ) | frozenset({"amp", "code", "gt", "lt", "pre"})
+    TOKEN_PATTERN = re.compile(r"[a-z0-9#\+\._$:-]+")
     TFIDF_STRIP_CHARS = "".join(character for character in string.punctuation if character not in ".#+$_-")
 
     @staticmethod
@@ -45,15 +46,19 @@ class FeatureExtraction:
 
     @staticmethod
     def words(text: str):
-        return FeatureExtraction.normalize(text).split()
+        return FeatureExtraction.TOKEN_PATTERN.findall(FeatureExtraction.normalize(text))
 
     @staticmethod
     def content_words(text: str):
-        return [word for word in FeatureExtraction.words(text) if word not in FeatureExtraction.STOP_WORDS]
+        return [
+            word
+            for word in FeatureExtraction.words(text)
+            if len(word) >= 2 and word not in FeatureExtraction.STOP_WORDS
+        ]
 
     @staticmethod
     def unique_words(text: str):
-        return set(FeatureExtraction.words(text))
+        return set(FeatureExtraction.content_words(text))
 
     @staticmethod
     def tfidf_words(text: str):
@@ -77,27 +82,18 @@ class FeatureExtraction:
         return int(bool(re.search(pattern, normalized_text)))
 
     @staticmethod
-    def has_exclusive_words(text: str, words: list[str]):
+    def contains_exclusive_words(text: str, words: list[str]):
         text_words = FeatureExtraction.unique_words(text)
         return int(any(word in text_words for word in words))
 
     @staticmethod
-    def has_alternative_spelling(text: str, spellings: tuple[str, ...]):
+    def contains_alternative_spelling(text: str, spellings: tuple[str, ...]):
         return int(any(FeatureExtraction.mentions_tag(text, spelling) for spelling in spellings))
 
     @staticmethod
-    def count_exclusive_words(text: str, words: list[str]):
-        text_words = FeatureExtraction.unique_words(text)
-        return count(word in text_words for word in words)
-
-    @staticmethod
-    def count_alternative_spelling(text: str, spellings: tuple[str, ...]):
-        return count(FeatureExtraction.mentions_tag(text, spelling) for spelling in spellings)
-
-    @staticmethod
     def count_special_chars(text: str):
-        special_chars = frozenset(string.punctuation)
-        return count(FeatureExtraction.normalize(text), lambda s: s in special_chars)
+        normalized_text = FeatureExtraction.normalize(text)
+        return sum(character in string.punctuation for character in normalized_text)
 
     @staticmethod
     def contains_phrase(text: str, phrase: str):
@@ -185,16 +181,16 @@ def build_vector_row(
     for tag in all_tags:
         row[f"contains_class__{feature_name(tag)}"] = FeatureExtraction.mentions_tag(post.post, tag)
 
-        row[f"count_exclusive_words__{feature_name(tag)}"] = FeatureExtraction.count_exclusive_words(
+        row[f"contains_exclusive_words__{feature_name(tag)}"] = FeatureExtraction.contains_exclusive_words(
             post.post, exclusive_words_by_tag[tag]
         )
 
-        row[f"count_alternative_spelling__{feature_name(tag)}"] = FeatureExtraction.count_alternative_spelling(
+        row[f"contains_alternative_spelling__{feature_name(tag)}"] = FeatureExtraction.contains_alternative_spelling(
             post.post, ALTERNATIVE_CLASS_SPELLINGS[tag]
         )
 
     for phrase in PHRASE_FEATURES:
-        row[f"count_phrase__{feature_name(phrase)}"] = FeatureExtraction.contains_phrase(post.post, phrase)
+        row[f"contains_phrase__{feature_name(phrase)}"] = FeatureExtraction.contains_phrase(post.post, phrase)
 
     return row
 
