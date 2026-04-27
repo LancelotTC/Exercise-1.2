@@ -37,13 +37,13 @@ MODEL_ORDER = [
     "LogisticRegression",
     "DecisionTreeClassifier",
     "KNeighborsClassifier",
-    "XGBClassifier",
+    # "XGBClassifier",
 ]
 MODEL_ALIASES = {
     "LogisticRegression": "lr",
     "DecisionTreeClassifier": "dt",
     "KNeighborsClassifier": "knn",
-    "XGBClassifier": "xgb",
+    # "XGBClassifier": "xgb",
 }
 
 
@@ -54,15 +54,15 @@ def build_model(model_name: str, best_params: dict):
         return DecisionTreeClassifier(random_state=RANDOM_SEED, **best_params)
     if model_name == "KNeighborsClassifier":
         return KNeighborsClassifier(n_jobs=-1, **best_params)
-    if model_name == "XGBClassifier":
-        return XGBClassifier(
-            random_state=RANDOM_SEED,
-            n_jobs=-1,
-            objective="multi:softprob",
-            eval_metric="mlogloss",
-            tree_method="hist",
-            **best_params,
-        )
+    # if model_name == "XGBClassifier":
+    #     return XGBClassifier(
+    #         random_state=RANDOM_SEED,
+    #         n_jobs=-1,
+    #         objective="multi:softprob",
+    #         eval_metric="mlogloss",
+    #         tree_method="hist",
+    #         **best_params,
+    #     )
 
     raise RuntimeError(f"Unsupported model '{model_name}' in {HYPERPARAMETERS_FILE}.")
 
@@ -172,13 +172,13 @@ def build_ensemble_models(results: dict):
     meta_estimator = LogisticRegression(max_iter=4000, random_state=RANDOM_SEED, class_weight="balanced")
 
     return {
-        "StackingClassifier": StackingClassifier(
-            estimators=build_base_estimators(results),
-            final_estimator=meta_estimator,
-            stack_method="predict_proba",
-            cv=cv,
-            n_jobs=-1,
-        ),
+        # "StackingClassifier": StackingClassifier(
+        #     estimators=build_base_estimators(results),
+        #     final_estimator=meta_estimator,
+        #     stack_method="predict_proba",
+        #     cv=cv,
+        #     n_jobs=-1,
+        # ),
         "StackingClassifierPassthrough": StackingClassifier(
             estimators=build_base_estimators(results),
             final_estimator=LogisticRegression(max_iter=4000, random_state=RANDOM_SEED, class_weight="balanced"),
@@ -214,11 +214,15 @@ def predict_with_confidence(model, features):
 
 def run_stacking_predictions():
     results = load_hyperparameter_results()
-    results = {model_name: results[model_name] for model_name in MODEL_ORDER if model_name in results}
-    if not results:
-        raise RuntimeError(f"No hyperparameter results found in '{HYPERPARAMETERS_FILE}'.")
-
     features, target, metadata = load_modeling_data()
+    results = {
+        model_name: results[model_name]
+        for model_name in MODEL_ORDER
+        if model_name in results and results[model_name].get("feature_columns") == len(features.columns)
+    }
+    if not results:
+        raise RuntimeError(f"No compatible hyperparameter results found in '{HYPERPARAMETERS_FILE}'.")
+
     label_encoder = LabelEncoder()
     encoded_target = label_encoder.fit_transform(target)
     labels = list(label_encoder.classes_)

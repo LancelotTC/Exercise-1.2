@@ -1,17 +1,24 @@
 import re
 from collections import Counter, defaultdict
 from pathlib import Path
+import string
 
 import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 from constants import (
     ALTERNATIVE_CLASS_SPELLINGS,
     ENGLISH_STOPWORDS_FILE,
     PHRASE_FEATURES,
+    TFIDF_MAX_DF,
+    TFIDF_MAX_FEATURES,
+    TFIDF_MIN_DF,
+    TFIDF_NGRAM_RANGE,
     VECTOR_POST_LIMIT,
     VECTORS_FILE,
 )
 from utils import Post, load_dataset, count
+
 
 TOP_TAG_LIMIT = 10
 TOP_WORD_LIMIT = 10
@@ -31,6 +38,7 @@ class FeatureExtraction:
     STOP_WORDS = frozenset(
         word.strip() for word in ENGLISH_STOPWORDS_FILE.read_text(encoding="utf-8").splitlines() if word.strip()
     )
+    TFIDF_STRIP_CHARS = "".join(character for character in string.punctuation if character not in ".#+$_-")
 
     @staticmethod
     def normalize(text: str):
@@ -47,6 +55,20 @@ class FeatureExtraction:
     @staticmethod
     def unique_words(text: str):
         return set(FeatureExtraction.words(text))
+
+    @staticmethod
+    def tfidf_words(text: str):
+        tokens = []
+
+        for word in FeatureExtraction.words(text):
+            token = word.strip(FeatureExtraction.TFIDF_STRIP_CHARS)
+            if len(token) < 2 or token in FeatureExtraction.STOP_WORDS:
+                continue
+            if not any(character.isalnum() for character in token):
+                continue
+            tokens.append(token)
+
+        return tokens
 
     @staticmethod
     def mentions_tag(text: str, tag: str):
@@ -74,6 +96,11 @@ class FeatureExtraction:
         return count(FeatureExtraction.mentions_tag(text, spelling) for spelling in spellings)
 
     @staticmethod
+    def count_special_chars(text: str):
+        special_chars = frozenset(string.punctuation)
+        return count(FeatureExtraction.normalize(text), lambda s: s in special_chars)
+
+    @staticmethod
     def contains_phrase(text: str, phrase: str):
         normalized_text = FeatureExtraction.normalize(text)
         normalized_phrase = FeatureExtraction.normalize(phrase)
@@ -96,6 +123,18 @@ def feature_name(name: str):
         return SPECIAL_FEATURE_NAMES[normalized]
 
     return re.sub(r"[^a-z0-9]+", "_", normalized).strip("_")
+
+
+def unique_column_names(prefix: str, raw_names):
+    used = Counter()
+    columns = []
+
+    for raw_name in raw_names:
+        base_name = f"{prefix}{feature_name(raw_name)}"
+        used[base_name] += 1
+        columns.append(base_name if used[base_name] == 1 else f"{base_name}_{used[base_name]}")
+
+    return columns
 
 
 def collect_feature_words(posts: list[Post]):
@@ -141,6 +180,7 @@ def build_vector_row(
     row: dict[str, int | str] = {
         "id": int(post.id) if post.id is not None else row_index,
         "tags": FeatureExtraction.normalize(post.tags),
+        "count_special_chars": FeatureExtraction.count_special_chars(post.post),
     }
 
     for tag in all_tags:
@@ -150,7 +190,7 @@ def build_vector_row(
             post.post, exclusive_words_by_tag[tag]
         )
 
-        row[f"count_alternative_spelling__{feature_name(tag)}"] = FeatureExtraction.has_alternative_spelling(
+        row[f"count_alternative_spelling__{feature_name(tag)}"] = FeatureExtraction.count_alternative_spelling(
             post.post, ALTERNATIVE_CLASS_SPELLINGS[tag]
         )
 
@@ -160,12 +200,32 @@ def build_vector_row(
     return row
 
 
+def build_tfidf_frame(reference_posts: list[Post], posts: list[Post]):
+    vectorizer = TfidfVectorizer(
+        tokenizer=FeatureExtraction.tfidf_words,
+        token_pattern=None,
+        lowercase=False,
+        max_features=TFIDF_MAX_FEATURES,
+        min_df=TFIDF_MIN_DF,
+        max_df=TFIDF_MAX_DF,
+        ngram_range=TFIDF_NGRAM_RANGE,
+        sublinear_tf=True,
+    )
+    vectorizer.fit([post.post for post in reference_posts])
+    matrix = vectorizer.transform([post.post for post in posts])
+    columns = unique_column_names("tfidf__", vectorizer.get_feature_names_out())
+    return pd.DataFrame(matrix.toarray(), columns=columns, dtype="float32")
+
+
 def write_vectors(posts: list[Post], reference_posts: list[Post], output_path: Path):
     all_tags, _, exclusive_words_by_tag = collect_feature_words(reference_posts)
-    rows = [build_vector_row(post, index, all_tags, exclusive_words_by_tag) for index, post in enumerate(posts)]
+    manual_rows = [build_vector_row(post, index, all_tags, exclusive_words_by_tag) for index, post in enumerate(posts)]
+    manual_frame = pd.DataFrame(manual_rows)
+    tfidf_frame = build_tfidf_frame(reference_posts, posts)
+    output_frame = pd.concat([manual_frame, tfidf_frame], axis=1)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    pd.DataFrame(rows).to_csv(output_path, index=False)
+    output_frame.to_csv(output_path, index=False)
 
 
 if __name__ == "__main__":

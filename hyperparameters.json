@@ -1,32 +1,14 @@
 {
     "LogisticRegression": {
-        "best_score": 0.7506317326699842,
+        "best_score": 0.8081571121324848,
         "best_params": {
-            "C": 4.817207203110023,
-            "class_weight": "balanced",
-            "fit_intercept": false,
+            "C": 1.5609951178156398,
+            "class_weight": null,
+            "fit_intercept": true,
             "tol": 1e-06
         },
         "training_rows": 40000,
-        "feature_columns": 149,
-        "scoring": "f1_macro"
-    },
-    "XGBClassifier": {
-        "best_score": 0.004701397712833545,
-        "best_params": {
-            "colsample_bytree": 0.5870727711973196,
-            "gamma": 0.010115402653101345,
-            "grow_policy": "lossguide",
-            "learning_rate": 0.007117600862757295,
-            "max_depth": 14,
-            "min_child_weight": 21,
-            "n_estimators": 1118,
-            "reg_alpha": 0.07482570377261556,
-            "reg_lambda": 0.03329021156509418,
-            "subsample": 0.7534541118428143
-        },
-        "training_rows": 1500,
-        "feature_columns": 60,
+        "feature_columns": 661,
         "scoring": "f1_macro"
     }
 }

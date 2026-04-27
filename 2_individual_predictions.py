@@ -168,11 +168,15 @@ def fit_and_predict(model_name: str, model, X_train, y_train, X_predict):
 
 def run_individual_predictions():
     results = load_hyperparameter_results()
-    results = {model_name: results[model_name] for model_name in MODEL_ORDER if model_name in results}
-    if not results:
-        raise RuntimeError(f"No hyperparameter results found in '{HYPERPARAMETERS_FILE}'.")
-
     features, target, metadata = load_modeling_data()
+    results = {
+        model_name: results[model_name]
+        for model_name in MODEL_ORDER
+        if model_name in results and results[model_name].get("feature_columns") == len(features.columns)
+    }
+    if not results:
+        raise RuntimeError(f"No compatible hyperparameter results found in '{HYPERPARAMETERS_FILE}'.")
+
     labels = sorted(target.unique())
     X_train, X_val, y_train, y_val, _, metadata_val = train_test_split(
         features,

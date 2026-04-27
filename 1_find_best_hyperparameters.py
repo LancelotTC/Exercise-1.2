@@ -19,6 +19,8 @@ from constants import (
     RANDOM_SEED,
 )
 from utils import load_hyperparameter_results, load_modeling_data, save_json_file
+from tqdm.auto import tqdm
+from skopt.callbacks import DeltaYStopper
 
 
 def sample_training_rows(features, target):
@@ -46,63 +48,63 @@ def build_searches():
                 "C": Real(1e-4, 1e3, prior="log-uniform"),
                 "class_weight": Categorical([None, "balanced"]),
                 "fit_intercept": Categorical([True, False]),
-                "solver": Categorical(["lbfgs", "newton-cg", "newton-cholesky", "sag", "saga"]),
+                # "solver": Categorical(["lbfgs", "newton-cg", "newton-cholesky", "sag", "saga"]),
                 "tol": Real(1e-6, 1e-2, prior="log-uniform"),
             },
         ),
-        "DecisionTreeClassifier": (
-            DecisionTreeClassifier(random_state=RANDOM_SEED),
-            {
-                "criterion": Categorical(["gini", "entropy", "log_loss"]),
-                "splitter": Categorical(["best", "random"]),
-                "max_depth": Categorical([None, 6, 8, 12, 20, 40, 80, 120]),
-                "max_leaf_nodes": Categorical([None, 16, 32, 64, 128, 256, 512, 1024]),
-                "min_samples_split": Categorical([2, 3, 4, 5, 8, 12, 20, 40, 80, 160, 320]),
-                "min_samples_leaf": Categorical([1, 2, 3, 4, 5, 8, 12, 20, 40, 80]),
-                "min_weight_fraction_leaf": Categorical([0.0, 1e-5, 1e-4, 1e-3, 5e-3, 1e-2]),
-                "max_features": Categorical([None, "sqrt", "log2", 0.25, 0.5, 0.75]),
-                "min_impurity_decrease": Categorical([0.0, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3]),
-                "ccp_alpha": Categorical([0.0, 1e-12, 1e-10, 1e-8, 1e-6, 1e-4, 1e-3, 1e-2]),
-            },
-        ),
-        "KNeighborsClassifier": (
-            KNeighborsClassifier(n_jobs=HYPERPARAMETER_SEARCH_JOBS),
-            {
-                "n_neighbors": Integer(1, 200),
-                "weights": Categorical(["uniform", "distance"]),
-                "algorithm": Categorical(["auto", "ball_tree", "kd_tree", "brute"]),
-                "metric": Categorical(["minkowski", "euclidean", "manhattan", "chebyshev"]),
-                "p": Integer(1, 2),
-                "leaf_size": Integer(10, 100),
-            },
-        ),
-        "XGBClassifier": (
-            XGBClassifier(
-                random_state=RANDOM_SEED,
-                n_jobs=HYPERPARAMETER_SEARCH_JOBS,
-                objective="multi:softprob",
-                eval_metric="mlogloss",
-                tree_method="hist",
-            ),
-            {
-                "n_estimators": Integer(100, 3000),
-                "learning_rate": Real(1e-3, 0.5, prior="log-uniform"),
-                "max_depth": Integer(2, 20),
-                "min_child_weight": Integer(1, 50),
-                "subsample": Real(0.3, 1.0),
-                "colsample_bytree": Real(0.3, 1.0),
-                "colsample_bylevel": Real(0.3, 1.0),
-                "colsample_bynode": Real(0.3, 1.0),
-                "gamma": Real(1e-10, 10.0, prior="log-uniform"),
-                "reg_alpha": Real(1e-10, 100.0, prior="log-uniform"),
-                "reg_lambda": Real(1e-3, 100.0, prior="log-uniform"),
-                "max_delta_step": Integer(0, 10),
-                "max_bin": Integer(64, 512),
-                "max_leaves": Categorical([0, 31, 63, 127, 255, 511]),
-                "num_parallel_tree": Integer(1, 8),
-                "grow_policy": Categorical(["depthwise", "lossguide"]),
-            },
-        ),
+        # "DecisionTreeClassifier": (
+        #     DecisionTreeClassifier(random_state=RANDOM_SEED),
+        #     {
+        #         "criterion": Categorical(["gini", "entropy", "log_loss"]),
+        #         "splitter": Categorical(["best", "random"]),
+        #         "max_depth": Categorical([None, 6, 8, 12, 20, 40, 80, 120]),
+        #         "max_leaf_nodes": Categorical([None, 16, 32, 64, 128, 256, 512, 1024]),
+        #         "min_samples_split": Categorical([2, 3, 4, 5, 8, 12, 20, 40, 80, 160, 320]),
+        #         "min_samples_leaf": Categorical([1, 2, 3, 4, 5, 8, 12, 20, 40, 80]),
+        #         "min_weight_fraction_leaf": Categorical([0.0, 1e-5, 1e-4, 1e-3, 5e-3, 1e-2]),
+        #         "max_features": Categorical([None, "sqrt", "log2", 0.25, 0.5, 0.75]),
+        #         "min_impurity_decrease": Categorical([0.0, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3]),
+        #         "ccp_alpha": Categorical([0.0, 1e-12, 1e-10, 1e-8, 1e-6, 1e-4, 1e-3, 1e-2]),
+        #     },
+        # ),
+        # "KNeighborsClassifier": (
+        #     KNeighborsClassifier(n_jobs=HYPERPARAMETER_SEARCH_JOBS),
+        #     {
+        #         "n_neighbors": Integer(1, 200),
+        #         "weights": Categorical(["uniform", "distance"]),
+        #         "algorithm": Categorical(["auto", "ball_tree", "kd_tree", "brute"]),
+        #         "metric": Categorical(["minkowski", "euclidean", "manhattan", "chebyshev"]),
+        #         "p": Integer(1, 2),
+        #         "leaf_size": Integer(10, 100),
+        #     },
+        # ),
+        # "XGBClassifier": (
+        #     XGBClassifier(
+        #         random_state=RANDOM_SEED,
+        #         n_jobs=HYPERPARAMETER_SEARCH_JOBS,
+        #         objective="multi:softprob",
+        #         eval_metric="mlogloss",
+        #         tree_method="hist",
+        #     ),
+        #     {
+        #         "n_estimators": Integer(100, 5000),
+        #         "learning_rate": Real(1e-3, 0.5, prior="log-uniform"),
+        #         "max_depth": Integer(2, 100),
+        #         "min_child_weight": Integer(1, 50),
+        #         "subsample": Real(0.3, 1.0),
+        #         "colsample_bytree": Real(0.3, 1.0),
+        #         "colsample_bylevel": Real(0.3, 1.0),
+        #         "colsample_bynode": Real(0.3, 1.0),
+        #         "gamma": Real(1e-10, 10.0, prior="log-uniform"),
+        #         "reg_alpha": Real(1e-10, 100.0, prior="log-uniform"),
+        #         "reg_lambda": Real(1e-3, 100.0, prior="log-uniform"),
+        #         "max_delta_step": Integer(0, 10),
+        #         "max_bin": Integer(32, 512),
+        #         "max_leaves": Categorical([0, 31, 63, 127, 255, 511]),
+        #         "num_parallel_tree": Integer(1, 8),
+        #         "grow_policy": Categorical(["depthwise", "lossguide"]),
+        #     },
+        # ),
     }
 
 
@@ -135,6 +137,8 @@ def run_hyperparameter_search():
             f"n_best={HYPERPARAMETER_SEARCH_DELTA_Y_N_BEST}"
         )
 
+        pbar = tqdm(total=HYPERPARAMETER_SEARCH_ITERATIONS, desc=model_name)
+
         search = BayesSearchCV(
             estimator=model,
             search_spaces=search_space,
@@ -146,14 +150,25 @@ def run_hyperparameter_search():
             refit=True,
             verbose=0,
         )
+
+        def on_step(res):
+            pbar.update(1)
+            pbar.set_postfix(best_score=f"{-res.fun:.4f}")
+            return False
+
         search.fit(
             features,
             search_target,
-            callback=DeltaYStopper(
-                HYPERPARAMETER_SEARCH_DELTA_Y,
-                n_best=HYPERPARAMETER_SEARCH_DELTA_Y_N_BEST,
-            ),
+            callback=[
+                on_step,
+                DeltaYStopper(
+                    HYPERPARAMETER_SEARCH_DELTA_Y,
+                    n_best=HYPERPARAMETER_SEARCH_DELTA_Y_N_BEST,
+                ),
+            ],
         )
+
+        pbar.close()
 
         best_score = float(search.best_score_)
         previous_result = results.get(model_name, {})
