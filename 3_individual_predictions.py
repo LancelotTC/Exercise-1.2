@@ -38,7 +38,7 @@ from utils import (
 SUPPORTED_MODEL_NAMES = (
     "LogisticRegression",
     "DecisionTreeClassifier",
-    # "XGBClassifier",
+    "XGBClassifier",
 )
 
 
