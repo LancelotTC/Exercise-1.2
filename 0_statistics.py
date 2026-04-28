@@ -89,12 +89,12 @@ def analyze_tag_match(dataframe: pd.DataFrame):
     print("\n==== PROPORTION OF POSTS CONTAINING THEIR TAG ====")
     print(result)
 
-    plt.figure(figsize=(10, 5))
-    result.plot(kind="bar")
+    plt.figure(figsize=(10, 6))
+    result.iloc[::-1].plot(kind="barh")
     plt.title("Proportion of posts containing their tag")
-    plt.xlabel("Tag")
-    plt.ylabel("Proportion")
-    plt.xticks(rotation=45, ha="right")
+    plt.xlabel("Proportion")
+    plt.ylabel("Tag")
+    plt.xlim(0, 1)
     save_plot(OUTPUT_DIR / "tag self mention proportion.png")
 
 
@@ -123,12 +123,13 @@ def analyze_wrong_tag_mentions(dataframe: pd.DataFrame):
     print("\n==== PROPORTION OF WRONG TAG MENTIONS ====")
     print(result)
 
-    plt.figure(figsize=(10, 5))
-    plt.bar(result["tag"], result["proportion_wrong"])
+    plot_frame = result.iloc[::-1]
+    plt.figure(figsize=(10, 6))
+    plt.barh(plot_frame["tag"], plot_frame["proportion_wrong"])
     plt.title("Proportion of posts mentioning a tag where the true tag is different")
-    plt.xlabel("Mentioned tag")
-    plt.ylabel("Proportion with different true tag")
-    plt.xticks(rotation=45, ha="right")
+    plt.xlabel("Proportion with different true tag")
+    plt.ylabel("Mentioned tag")
+    plt.xlim(0, 1)
     save_plot(OUTPUT_DIR / "tag mismatch proportion.png")
 
 
