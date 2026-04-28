@@ -207,7 +207,7 @@ def predict_with_confidence(model, features):
 
 
 def load_compatible_results(feature_columns):
-    loaded_results = load_hyperparameter_results()
+    loaded_results = load_hyperparameter_results(feature_columns)
     compatible_results = {}
 
     for model_name in SUPPORTED_MODEL_NAMES:

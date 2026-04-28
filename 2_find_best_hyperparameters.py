@@ -182,6 +182,7 @@ def run_hyperparameter_search():
             "training_rows": len(features),
             "feature_columns": len(features.columns),
             "feature_signature": feature_signature,
+            "feature_id": feature_signature,
             "scoring": "f1_macro",
         }
         save_json_file(HYPERPARAMETERS_FILE, results)

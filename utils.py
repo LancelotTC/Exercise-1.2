@@ -65,6 +65,10 @@ def get_feature_signature(column_names: Iterable[str]) -> str:
     return hashlib.sha256(joined_names.encode("utf-8")).hexdigest()
 
 
+def current_feature_id(column_names: Iterable[str]) -> str:
+    return get_feature_signature(column_names)
+
+
 def hyperparameter_result_matches(
     result: dict[str, Any],
     feature_columns: list[str] | pd.Index,
@@ -73,7 +77,8 @@ def hyperparameter_result_matches(
     if result.get("feature_columns") != len(feature_columns):
         return False
 
-    if result.get("feature_signature") != get_feature_signature(feature_columns):
+    saved_feature_id = result.get("feature_id", result.get("feature_signature"))
+    if saved_feature_id != current_feature_id(feature_columns):
         return False
 
     if training_rows is not None and result.get("training_rows") != training_rows:
@@ -150,5 +155,29 @@ def save_json_file(path: str | Path, payload: Any) -> None:
             temp_path.unlink(missing_ok=True)
 
 
-def load_hyperparameter_results() -> dict[str, object]:
-    return load_json_file(HYPERPARAMETERS_FILE, {})
+def load_hyperparameter_results(feature_columns: list[str] | pd.Index | None = None) -> dict[str, object]:
+    results = load_json_file(HYPERPARAMETERS_FILE, {})
+
+    if feature_columns is None:
+        return results
+
+    updated = False
+    feature_count = len(feature_columns)
+    feature_id = current_feature_id(feature_columns)
+
+    for result in results.values():
+        if result.get("feature_columns") != feature_count:
+            continue
+
+        if result.get("feature_signature") != feature_id:
+            result["feature_signature"] = feature_id
+            updated = True
+
+        if result.get("feature_id") != feature_id:
+            result["feature_id"] = feature_id
+            updated = True
+
+    if updated:
+        save_json_file(HYPERPARAMETERS_FILE, results)
+
+    return results

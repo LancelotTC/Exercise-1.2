@@ -28,7 +28,6 @@ from constants import (
     VALIDATION_SIZE,
 )
 from utils import (
-    get_feature_signature,
     hyperparameter_result_matches,
     load_hyperparameter_results,
     load_modeling_data,
@@ -173,7 +172,7 @@ def fit_and_predict(model_name: str, model, train_features, train_target, predic
 
 
 def load_compatible_results(feature_columns):
-    loaded_results = load_hyperparameter_results()
+    loaded_results = load_hyperparameter_results(feature_columns)
     compatible_results = {}
 
     for model_name in SUPPORTED_MODEL_NAMES:
@@ -188,12 +187,11 @@ def load_compatible_results(feature_columns):
 
 
 def build_incompatibility_message(feature_columns) -> str:
-    loaded_results = load_hyperparameter_results()
+    loaded_results = load_hyperparameter_results(feature_columns)
     if not loaded_results:
         return f"No saved results found in '{HYPERPARAMETERS_FILE}'. Run step 2 first."
 
     current_feature_count = len(feature_columns)
-    current_feature_signature = get_feature_signature(feature_columns)
     details = []
 
     for model_name in SUPPORTED_MODEL_NAMES:
@@ -207,12 +205,9 @@ def build_incompatibility_message(feature_columns) -> str:
         if saved_feature_count != current_feature_count:
             reasons.append(f"feature_columns={saved_feature_count}, current={current_feature_count}")
 
-        saved_feature_signature = result.get("feature_signature")
-        if saved_feature_signature != current_feature_signature:
-            if saved_feature_signature is None:
-                reasons.append("missing feature_signature")
-            else:
-                reasons.append("feature_signature mismatch")
+        saved_feature_id = result.get("feature_id", result.get("feature_signature"))
+        if saved_feature_id is None:
+            reasons.append("missing feature_id")
 
         if not reasons:
             reasons.append("unsupported or unknown mismatch")

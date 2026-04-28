@@ -9,8 +9,9 @@
         },
         "training_rows": 40000,
         "feature_columns": 662,
-        "feature_signature": "be226ce56283de23397894edf5a02a14478aae4c03dcc555173f4f6eac4c3afe",
-        "scoring": "f1_macro"
+        "feature_signature": "962da098b1254bf41aebd5ce3b96b656899901e5f76998c8ab09869e73760ab4",
+        "scoring": "f1_macro",
+        "feature_id": "962da098b1254bf41aebd5ce3b96b656899901e5f76998c8ab09869e73760ab4"
     },
     "DecisionTreeClassifier": {
         "best_score": 0.7239004086999761,
@@ -28,8 +29,9 @@
         },
         "training_rows": 40000,
         "feature_columns": 662,
-        "feature_signature": "be226ce56283de23397894edf5a02a14478aae4c03dcc555173f4f6eac4c3afe",
-        "scoring": "f1_macro"
+        "feature_signature": "962da098b1254bf41aebd5ce3b96b656899901e5f76998c8ab09869e73760ab4",
+        "scoring": "f1_macro",
+        "feature_id": "962da098b1254bf41aebd5ce3b96b656899901e5f76998c8ab09869e73760ab4"
     },
     "XGBClassifier": {
         "best_score": 0.7439004086999761,
@@ -47,7 +49,8 @@
         },
         "training_rows": 40000,
         "feature_columns": 662,
-        "feature_signature": "be226ce56283de23397894edf5a02a14478aae4c03dcc555173f4f6eac4c3afe",
-        "scoring": "f1_macro"
+        "feature_signature": "962da098b1254bf41aebd5ce3b96b656899901e5f76998c8ab09869e73760ab4",
+        "scoring": "f1_macro",
+        "feature_id": "962da098b1254bf41aebd5ce3b96b656899901e5f76998c8ab09869e73760ab4"
     }
 }
