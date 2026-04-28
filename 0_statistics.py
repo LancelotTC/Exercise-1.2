@@ -187,7 +187,7 @@ def summarize_phrase_distribution(dataframe: pd.DataFrame):
 
     for expected_class, phrases in PHRASE_GROUPS.items():
         for phrase in phrases:
-            present_mask = dataframe["post"].map(lambda text: FeatureExtraction.contains_phrase(text, phrase) == 1)
+            present_mask = dataframe["post"].map(lambda text: FeatureExtraction.count_phrase(text, phrase) > 0)
             present_rows = dataframe[present_mask]
             total_present_count = len(present_rows)
             top_classes = present_rows["tags"].value_counts().head(3)

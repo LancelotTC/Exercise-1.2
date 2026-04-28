@@ -59,9 +59,9 @@ Current feature groups:
 - `id`
 - `tags`
 - class mention indicators
-- exclusive-word presence indicators per class
+- exclusive-word occurrence counts per class
 - alternative-spelling presence indicators per class
-- phrase presence indicators from `PHRASE_GROUPS` in `constants.py`
+- phrase occurrence counts from `PHRASE_GROUPS` in `constants.py`
 - `count_special_chars`
 - TF-IDF features
 

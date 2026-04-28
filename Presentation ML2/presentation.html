@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Stack Overflow Tag Classification</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reset.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reveal.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/theme/black.min.css" id="theme">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Outfit:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary-accent: #8b5cf6;
+      --secondary-accent: #ec4899;
+      --glass-bg: rgba(255, 255, 255, 0.05);
+      --glass-border: rgba(255, 255, 255, 0.1);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    body {
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+      font-family: "Inter", sans-serif;
+      color: var(--text-main);
+    }
+
+    .reveal {
+      font-family: "Inter", sans-serif;
+    }
+
+    .reveal h1,
+    .reveal h2,
+    .reveal h3,
+    .reveal h4 {
+      font-family: "Outfit", sans-serif;
+      text-transform: none;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .reveal h1 {
+      font-size: 4em;
+      background: linear-gradient(to right, var(--primary-accent), var(--secondary-accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 20px;
+    }
+
+    .reveal h2 {
+      font-size: 2.8em;
+      color: #e2e8f0;
+      margin-bottom: 36px;
+    }
+
+    .glass-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 35px;
+      margin: 15px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+      text-align: left;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 30px;
+      width: 100%;
+    }
+
+    .card-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 25px;
+      width: 100%;
+    }
+
+    .pipeline-step {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .pipeline-number {
+      font-family: "Outfit", sans-serif;
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--text-main);
+      background: linear-gradient(135deg, var(--primary-accent), var(--secondary-accent));
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-right: 25px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4);
+    }
+
+    .pipeline-content h3 {
+      font-size: 1.55rem;
+      color: #38bdf8;
+      margin-bottom: 5px;
+    }
+
+    .pipeline-content p {
+      font-size: 1.16rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+      margin: 0;
+    }
+
+    .pipeline-arrow {
+      text-align: center;
+      font-size: 2rem;
+      color: var(--glass-border);
+      margin: 8px 0 8px 18px;
+    }
+
+    .icon-wrapper {
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, var(--primary-accent), var(--secondary-accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .big-number {
+      font-family: "Outfit", sans-serif;
+      font-size: 5rem;
+      font-weight: 800;
+      background: linear-gradient(to right, #4ade80, #3b82f6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin: 0;
+      line-height: 1;
+    }
+
+    .metric-label {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-top: 15px;
+    }
+
+    .reveal p {
+      line-height: 1.55;
+      font-size: 1.3rem;
+      color: #cbd5e1;
+    }
+
+    .reveal ul {
+      list-style-type: none;
+      padding-left: 0;
+    }
+
+    .reveal ul li {
+      position: relative;
+      padding-left: 42px;
+      margin-bottom: 18px;
+      font-size: 1.22rem;
+      line-height: 1.45;
+      color: #cbd5e1;
+    }
+
+    .reveal ul li::before {
+      content: "\2192";
+      position: absolute;
+      left: 0;
+      color: var(--primary-accent);
+      font-weight: bold;
+      font-size: 1.4rem;
+    }
+
+    .highlight-text {
+      color: #38bdf8;
+      font-weight: 600;
+    }
+
+    .tag-chip {
+      display: inline-block;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      background: rgba(139, 92, 246, 0.2);
+      color: #c4b5fd;
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      margin: 5px;
+    }
+
+    .code-chip {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-family: monospace;
+      background: rgba(0, 0, 0, 0.5);
+      color: #a78bfa;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      margin: 2px 0;
+    }
+
+    .container-large {
+      width: 100%;
+      max-width: 1300px;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+      <section data-transition="zoom">
+        <h1>Stack Overflow</h1>
+        <h2 style="font-size: 2.3rem;">Current Tag Classification Pipeline</h2>
+
+        <div style="display: flex; justify-content: center; align-items: center; margin: 25px 0;">
+          <div style="background: white; padding: 15px 30px; border-radius: 12px; display: inline-block;">
+            <div style="font-family: 'Arial Black', Impact, sans-serif; font-size: 38px; line-height: 1; letter-spacing: -1.5px; display: flex; align-items: center;">
+              <span style="color: #E2001A; font-weight: 900;">INSA</span>
+              <span style="color: #2b2b2b; margin-left: 8px; font-weight: 900;">LYON</span>
+            </div>
+          </div>
+        </div>
+
+        <p style="font-size: 1.35rem; color: var(--text-muted); max-width: 80%; margin: 0 auto 25px auto;">
+          A fact-checked overview of the current code pipeline and the latest saved evaluation artifacts for predicting one of 20 Stack Overflow tags from short posts.
+        </p>
+
+        <div style="margin-top: 20px; font-size: 1.35rem; color: #f8fafc; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 15px; display: inline-block; background: rgba(0,0,0,0.2);">
+          <p style="margin: 5px 0; font-weight: 600;">Ahmed MANSOUR & Lancelot TARIOT CAMILLE</p>
+          <p style="margin: 5px 0; color: var(--text-muted); font-size: 1.1rem;">Supervised by: Prof. El&ouml;d EGYED-ZSIGMOND</p>
+        </div>
+
+        <div style="margin-top: 25px;">
+          <span class="tag-chip">Feature Engineering</span>
+          <span class="tag-chip">TF-IDF</span>
+          <span class="tag-chip">Stacking</span>
+        </div>
+
+        <aside class="notes">
+          [Ahmed]: Today we are presenting the current state of our Stack Overflow tag-classification project. <br><br>
+          [Lancelot]: We will separate what is true about the current code pipeline from what is only available as saved evaluation artifacts from the last full model run.
+        </aside>
+      </section>
+
+      <section data-transition="slide">
+        <h2>Data Overview</h2>
+        <div class="container-large">
+          <div class="card-grid">
+            <div class="glass-card" style="text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+              <div class="big-number">40,000</div>
+              <div class="metric-label">Total Stack Overflow Posts</div>
+              <p style="margin-top: 20px;">Equally distributed across <strong>20</strong> Stack Overflow technology tags.</p>
+            </div>
+            <div class="glass-card">
+              <div class="icon-wrapper"><i class="fa-solid fa-lightbulb"></i></div>
+              <h3 style="font-size: 1.8rem; margin-bottom: 15px;">The Core Challenge</h3>
+              <ul>
+                <li><strong>Short text:</strong> many posts are only a few lines of code or error output.</li>
+                <li><strong>Heavy overlap:</strong> explicit mentions can be misleading; HTML and C both exceed 66% wrong-mention rates.</li>
+                <li><strong>Response:</strong> we combine handcrafted indicators, TF-IDF, tuned classifiers, and a stacking ensemble.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <aside class="notes">
+          [Ahmed]: The dataset contains 40,000 posts evenly split across 20 tags. <br><br>
+          [Ahmed]: The difficulty is that the texts are short and the tag names overlap heavily, so naive substring matching is not enough.
+        </aside>
+      </section>
+
+      <section data-transition="convex">
+        <h2>The Current Pipeline</h2>
+        <p style="text-align: left; margin-bottom: 16px; padding: 0 40px; font-size: 1.15rem;">How the current repository transforms raw text into predictions:</p>
+        <div class="glass-card container-large" style="padding: 24px 26px;">
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 20px;">
+            <div style="display: flex; gap: 14px; align-items: flex-start; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 16px;">
+              <div class="pipeline-number" style="width: 44px; height: 44px; font-size: 1.2rem; margin-right: 0;">0</div>
+              <div>
+                <h3 style="font-size: 1.18rem; color: #38bdf8; margin: 0 0 6px 0;">Statistics & Diagnostics</h3>
+                <p style="font-size: 0.95rem; margin: 0; color: var(--text-muted);"><code>0_statistics.py</code><br>Tag mentions, misleading mentions, exclusive words, phrases, and ratios.</p>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 14px; align-items: flex-start; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 16px;">
+              <div class="pipeline-number" style="width: 44px; height: 44px; font-size: 1.2rem; margin-right: 0;">1</div>
+              <div>
+                <h3 style="font-size: 1.18rem; color: #38bdf8; margin: 0 0 6px 0;">Feature Extraction</h3>
+                <p style="font-size: 0.95rem; margin: 0; color: var(--text-muted);"><code>1_generate_vectors.py</code><br>664 columns from tag features, phrase counts, word counts, char counts, and TF-IDF.</p>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 14px; align-items: flex-start; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 16px;">
+              <div class="pipeline-number" style="width: 44px; height: 44px; font-size: 1.2rem; margin-right: 0;">2</div>
+              <div>
+                <h3 style="font-size: 1.18rem; color: #38bdf8; margin: 0 0 6px 0;">Hyperparameter Search</h3>
+                <p style="font-size: 0.95rem; margin: 0; color: var(--text-muted);"><code>2_find_best_hyperparameters.py</code><br><strong>BayesSearchCV</strong> with stratified CV and macro F1 scoring; active search spaces are currently LR and Decision Tree.</p>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 14px; align-items: flex-start; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 16px;">
+              <div class="pipeline-number" style="width: 44px; height: 44px; font-size: 1.2rem; margin-right: 0;">3</div>
+              <div>
+                <h3 style="font-size: 1.18rem; color: #38bdf8; margin: 0 0 6px 0;">Individual Models</h3>
+                <p style="font-size: 0.95rem; margin: 0; color: var(--text-muted);"><code>3_individual_predictions.py</code><br>Prediction script supports Logistic Regression, Decision Tree, and XGBoost when compatible tuned results exist.</p>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 14px; align-items: flex-start; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 16px; grid-column: 1 / span 2;">
+              <div class="pipeline-number" style="width: 44px; height: 44px; font-size: 1.2rem; margin-right: 0;">4</div>
+              <div>
+                <h3 style="font-size: 1.18rem; color: #38bdf8; margin: 0 0 6px 0;">Ensemble Layer</h3>
+                <p style="font-size: 0.95rem; margin: 0; color: var(--text-muted);"><code>4_stacking_classifiers.py</code><br>Stacking and voting variants; the repository still contains a saved <strong>StackingClassifier</strong> artifact from the previous full run.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="notes">
+          [Lancelot]: The current repository now starts with step 0, which is a statistics and diagnostics phase. <br><br>
+          [Lancelot]: Then we generate vectors, tune hyperparameters, evaluate the individual models, and finally run the ensemble layer. After the latest feature update, the downstream model steps need a fresh rerun.
+        </aside>
+      </section>
+
+      <section data-transition="slide">
+        <h2>Feature Analysis: Tag Mentions</h2>
+        <div class="glass-card container-large" style="text-align: center; padding: 15px;">
+          <div style="background: white; border-radius: 12px; display: inline-block; padding: 10px;">
+            <img src="images/tag_presence.png" alt="Tag Presence Plot" style="max-height: 480px; margin: 0; box-shadow: none;">
+          </div>
+          <p style="font-size: 1.25rem; margin-top: 15px;">
+            Not all tags are explicitly mentioned. jQuery appears in 76.5% of its posts, while Ruby-on-Rails is explicitly mentioned in only 0.35% of its posts.
+          </p>
+        </div>
+
+        <aside class="notes">
+          [Ahmed]: This plot shows that direct tag matching is a weak standalone feature. <br><br>
+          [Ahmed]: Some tags such as jQuery are often explicit, but others such as Ruby-on-Rails are almost never spelled out in the text.
+        </aside>
+      </section>
+
+      <section data-transition="slide">
+        <h2>Feature Analysis: Misleading Mentions</h2>
+        <div class="glass-card container-large" style="text-align: center; padding: 15px;">
+          <div style="background: white; border-radius: 12px; display: inline-block; padding: 10px;">
+            <img src="images/wrong_mentions.png" alt="Wrong Mentions Plot" style="max-height: 480px; margin: 0; box-shadow: none;">
+          </div>
+          <p style="font-size: 1.25rem; margin-top: 15px;">
+            Explicit mentions can still be deceptive: 67.6% of HTML mentions and 66.9% of C mentions occur in posts whose true tag is something else.
+          </p>
+        </div>
+
+        <aside class="notes">
+          [Ahmed]: Worse, even when the tag name appears, it can point to the wrong class. <br><br>
+          [Ahmed]: This is why the final system needs richer handcrafted features than a naive mention check.
+        </aside>
+      </section>
+
+      <section data-transition="slide">
+        <h2>How We Engineered Features</h2>
+        <div class="glass-card container-large">
+          <p style="font-size: 1.25rem; margin-bottom: 20px;">The current <code>FeatureExtraction</code> pipeline converts raw posts into structured indicators before TF-IDF:</p>
+          <div class="card-grid" style="margin-top: 20px;">
+            <div>
+              <h4 style="font-size: 1.35rem; color: #4ade80;"><i class="fa-solid fa-code"></i> 1. Regex Matching & Alternative Spellings</h4>
+              <p style="font-size: 1.1rem; margin-top: 10px;">
+                We use custom negative-lookaround expressions <code>(?&lt;![a-z0-9#\+\.-])</code> to distinguish tags such as C, C#, C++, and .NET correctly, and we add features for spellings such as <code>c sharp</code>, <code>cpp</code>, and <code>asp net</code>.
+              </p>
+            </div>
+            <div>
+              <h4 style="font-size: 1.35rem; color: #f472b6;"><i class="fa-solid fa-book"></i> 2. Exclusive Words & Phrase Groups</h4>
+              <p style="font-size: 1.1rem; margin-top: 10px;">
+                We pre-computed lists of <strong>Exclusive Words</strong> (words existing in only ONE class's training data) and <strong>Common Phrases</strong> (like <code>public class</code>). Our script counts the occurrences of these dictionaries per post.
+              </p>
+            </div>
+          </div>
+          <div style="margin-top: 25px;">
+            <h4 style="font-size: 1.35rem; color: #38bdf8;"><i class="fa-solid fa-asterisk"></i> 3. Special Characters + TF-IDF Complement</h4>
+            <p style="font-size: 1.1rem; margin-top: 10px;">We count punctuation density with <code>count_special_chars</code>, then combine those handcrafted counts with a 500-feature TF-IDF representation to capture both syntax and vocabulary.</p>
+          </div>
+        </div>
+
+        <aside class="notes">
+          [Lancelot]: The feature extractor now has several explicit components beyond raw text. <br><br>
+          [Lancelot]: It combines regex-aware tag detection, alternative spellings, pre-computed exclusive words, common phrases, and punctuation density before TF-IDF is added.
+        </aside>
+      </section>
+
+      <section data-transition="slide">
+        <h2>Vector Construction</h2>
+        <div class="glass-card container-large" style="text-align: center;">
+          <h3 style="font-size: 1.8rem; margin-bottom: 20px;">Feature Space Integration</h3>
+          <p style="font-size: 1.25rem; margin-bottom: 30px;">
+            Each post ends up as a 664-column modeling row: 164 handcrafted/count features plus 500 TF-IDF features.
+          </p>
+          <div style="display: flex; justify-content: center; align-items: center; gap: 15px; font-size: 1.35rem; font-family: monospace;">
+            <div style="background: rgba(56, 189, 248, 0.2); border: 1px solid #38bdf8; padding: 15px; border-radius: 8px;">
+              [ 1, 0, 1, 0, 3, ... ]<br>
+              <span style="font-size: 0.9rem; font-family: 'Inter', sans-serif; color: #38bdf8;">164 Handcrafted Features</span>
+            </div>
+            <div><i class="fa-solid fa-plus" style="color: var(--text-muted);"></i></div>
+            <div style="background: rgba(74, 222, 128, 0.2); border: 1px solid #4ade80; padding: 15px; border-radius: 8px;">
+              [ 0.0, 0.81, ..., 0.12 ]<br>
+              <span style="font-size: 0.9rem; font-family: 'Inter', sans-serif; color: #4ade80;">500 TF-IDF Features</span>
+            </div>
+            <div><i class="fa-solid fa-arrow-right" style="color: var(--text-muted);"></i></div>
+            <div style="background: rgba(236, 72, 153, 0.2); border: 1px solid #ec4899; padding: 15px; border-radius: 8px;">
+              [ 1, 0, 1, 0, 3, 0.0, 0.81, ..., 0.12 ]<br>
+              <span style="font-size: 0.9rem; font-family: 'Inter', sans-serif; color: #ec4899;">Final Modeling Table</span>
+            </div>
+          </div>
+          <p style="font-size: 1.15rem; color: var(--text-muted); margin-top: 30px;">
+            The exported CSV places handcrafted columns such as <code>contains_class__*</code>, <code>count_exclusive_words__*</code>, and <code>count_phrase__*</code> next to TF-IDF columns such as <code>tfidf__*</code>.
+          </p>
+        </div>
+
+        <aside class="notes">
+          [Lancelot]: This is the structure of the vector file used by every model. <br><br>
+          [Lancelot]: It is a single table combining handcrafted indicators with a fixed-size TF-IDF block.
+        </aside>
+      </section>
+
+      <section data-transition="slide">
+        <h2>In-Depth: TF-IDF Configuration</h2>
+        <div class="glass-card container-large">
+          <h3 style="font-size: 1.8rem; margin-bottom: 20px;">Text Matrix Representation</h3>
+          <p style="font-size: 1.25rem;">
+            Rather than raw word counts, our <strong>TfidfVectorizer</strong> down-weights ubiquitous tokens and emphasizes terms that are more informative for each class.
+          </p>
+          <hr style="border-color: rgba(255,255,255,0.1); margin: 30px 0;">
+          <ul style="font-size: 1.2rem;">
+            <li><span class="highlight-text">ngram_range=(1,2):</span> extracts single words and bigrams to capture patterns such as "memory leak" and "public class".</li>
+            <li><span class="highlight-text">min_df=2 / max_df=0.95:</span> drops very rare noise and extremely common vocabulary.</li>
+            <li><span class="highlight-text">max_features=500 + sublinear_tf=True:</span> keeps the vocabulary controlled while preventing local repetitions from dominating the model <span class="code-chip">1 + log(f)</span>.</li>
+          </ul>
+        </div>
+
+        <aside class="notes">
+          [Ahmed]: The TF-IDF component is also tightly configured. <br><br>
+          [Ahmed]: We keep bigrams, control document frequencies, and cap the space at 500 features while using sublinear term frequency scaling.
+        </aside>
+      </section>
+
+      <section data-transition="slide">
+        <h2>Current Model State</h2>
+        <div class="card-grid container-large" style="margin-top: 30px;">
+          <div class="glass-card">
+            <h3 style="font-size: 1.55rem; color: var(--primary-accent); margin-bottom: 15px;">Code Support</h3>
+            <p style="font-size: 1.1rem;">The prediction scripts currently support these individual models:</p>
+            <ul style="font-size: 1.08rem;">
+              <li><strong>Logistic Regression</strong> for a linear probability baseline.</li>
+              <li><strong>Decision Tree</strong> for non-linear rule-style boundaries.</li>
+              <li><strong>XGBoost</strong> for boosted tree performance.</li>
+            </ul>
+          </div>
+          <div class="glass-card">
+            <h3 style="font-size: 1.55rem; color: var(--secondary-accent); margin-bottom: 15px;">What Is Actually Current</h3>
+            <p style="font-size: 1.1rem;">
+              The search code uses <span class="highlight-text">BayesSearchCV</span> with macro F1 scoring and stratified cross-validation, and its active search spaces currently cover Logistic Regression and Decision Tree.<br><br>
+              However, the current vector file has <strong>664</strong> columns, while the saved <code>hyperparameters.json</code> results were produced on an older <strong>662</strong>-feature schema, so they are no longer compatible with the current vectors.
+            </p>
+          </div>
+        </div>
+
+        <aside class="notes">
+          [Lancelot]: The codebase still supports three individual models. <br><br>
+          [Lancelot]: The active search step currently covers Logistic Regression and Decision Tree. But after the latest feature-schema change, the saved hyperparameter results are stale and a fresh tuning run is needed.
+        </aside>
+      </section>
+
+      <section data-transition="slide">
+        <h2>Current Ensemble State</h2>
+        <div class="glass-card container-large">
+          <p style="font-size: 1.25rem; margin-bottom: 30px;">The ensemble code is current, but the saved ensemble outputs are archived artifacts from the previous 662-feature run.</p>
+          <div class="card-grid-3">
+            <div>
+              <h4 style="font-size: 1.25rem; color: #38bdf8;">Implemented Variants</h4>
+              <p style="font-size: 1.06rem; margin-top: 10px;">The current code supports <code>StackingClassifier</code>, <code>StackingClassifierPassthrough</code>, <code>SoftVotingClassifier</code>, and <code>HardVotingClassifier</code>.</p>
+            </div>
+            <div>
+              <h4 style="font-size: 1.25rem; color: #4ade80;">Latest Saved Artifact</h4>
+              <p style="font-size: 1.06rem; margin-top: 10px;">The saved ensemble artifact in <code>predictions/</code> is a <span class="highlight-text">StackingClassifier</span> using a Logistic Regression meta-estimator on base-model probabilities.</p>
+            </div>
+            <div>
+              <h4 style="font-size: 1.25rem; color: #f472b6;">Leakage Control</h4>
+              <p style="font-size: 1.06rem; margin-top: 10px;">The stacking process uses an internal 3-fold stratified cross-validation on the training split before evaluation on the external 5% holdout.</p>
+            </div>
+          </div>
+        </div>
+
+        <aside class="notes">
+          [Lancelot]: The ensemble layer still supports four variants in code. <br><br>
+          [Lancelot]: But the result files we still have are archived outputs from the previous vector schema, with StackingClassifier being the saved ensemble artifact.
+        </aside>
+      </section>
+
+      <section data-transition="convex">
+        <h2>Latest Saved Validation Results</h2>
+        <p style="margin-bottom: 30px;">These metrics come from the latest saved <strong>StackingClassifier</strong> validation artifact on a 2,000-row holdout from the previous 662-feature run.</p>
+
+        <div class="card-grid container-large" style="max-width: 1000px;">
+          <div class="glass-card" style="text-align: center; padding: 50px 20px;">
+            <div class="big-number">82.85%</div>
+            <div class="metric-label">Validation Accuracy</div>
+          </div>
+          <div class="glass-card" style="text-align: center; padding: 50px 20px;">
+            <div class="big-number">82.92%</div>
+            <div class="metric-label">Macro F1-Score</div>
+          </div>
+        </div>
+
+        <aside class="notes">
+          [Ahmed]: These are the latest saved validation metrics we currently have on disk. <br><br>
+          [Ahmed]: They come from the previous full run, before the feature table was expanded from 662 to 664 columns.
+        </aside>
+      </section>
+
+      <section data-transition="slide">
+        <h2>Latest Saved Model Comparison</h2>
+        <div class="glass-card container-large" style="text-align: center; padding: 15px;">
+          <div style="background: white; border-radius: 12px; display: inline-block; padding: 10px;">
+            <img src="images/model_results_comparison.png" alt="Model Results Comparison" style="max-height: 500px; margin: 0; box-shadow: none;">
+          </div>
+          <p style="font-size: 1.22rem; margin-top: 15px;">
+            In the latest saved artifacts, the ranking is <strong>StackingClassifier</strong> (82.85% accuracy), <strong>XGBoost</strong> (82.10%), <strong>Logistic Regression</strong> (81.85%), then <strong>Decision Tree</strong> (72.15%).
+          </p>
+        </div>
+
+        <aside class="notes">
+          [Ahmed]: This chart summarizes the latest saved model outputs, not a rerun on the new 664-feature vectors. <br><br>
+          [Ahmed]: Within those archived artifacts, the stacking ensemble still outperforms the individual models.
+        </aside>
+      </section>
+
+      <section data-transition="zoom">
+        <h2>Latest Saved Stacking Confusion Matrix</h2>
+        <div class="glass-card container-large" style="text-align: center; padding: 15px;">
+          <div style="background: white; border-radius: 12px; display: inline-block; padding: 10px;">
+            <img src="predictions/StackingClassifier/StackingClassifier_validation_confusion_matrix.png" alt="Stacking Confusion Matrix" style="max-height: 550px; margin: 0; box-shadow: none;">
+          </div>
+        </div>
+
+        <aside class="notes">
+          [Ahmed]: This confusion matrix is also from the latest saved stacking run. <br><br>
+          [Ahmed]: It remains useful for discussing class confusions, but it should not be described as a rerun on the newest 664-feature schema.
+        </aside>
+      </section>
+
+      <section data-transition="zoom">
+        <h2>Conclusion</h2>
+        <div class="glass-card container-large" style="text-align: center;">
+          <h3 style="font-size: 2rem; margin-bottom: 30px; color: var(--primary-accent);">Synergy Is Key</h3>
+          <p style="font-size: 1.35rem; line-height: 1.75;">
+            The current project state confirms that naive tag matching is too noisy for this dataset, especially on overlapping tags such as C, HTML, CSS, and framework names.<br><br>
+            <span class="highlight-text">Combining handcrafted regex features, exclusive words, phrase counts, TF-IDF vectorization, Bayesian tuning, and stacking</span> produced <strong>82.85% validation accuracy</strong> and <strong>0.829 macro F1</strong> in the latest saved full run, while the current 664-feature pipeline still needs a fresh end-to-end rerun.
+          </p>
+        </div>
+
+        <aside class="notes">
+          [Ahmed & Lancelot]: The key lesson remains the same: the best saved result came from combining explicit handcrafted signals with statistical text features and an ensemble layer. <br><br>
+          [Ahmed & Lancelot]: But to be fully current, the updated 664-feature pipeline now needs a fresh tuning and evaluation run.
+        </aside>
+      </section>
+
+      <section data-transition="fade">
+        <h1 style="font-size: 5rem;">Thank You</h1>
+        <p style="font-size: 1.5rem; color: var(--text-muted);">Questions & Discussion</p>
+
+        <aside class="notes">
+          [End of Presentation]
+        </aside>
+      </section>
+
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reveal.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/plugin/notes/notes.min.js"></script>
+  <script>
+    Reveal.initialize({
+      width: 1400,
+      height: 900,
+      margin: 0.1,
+      minScale: 0.2,
+      maxScale: 2.0,
+      hash: true,
+      controls: true,
+      progress: true,
+      center: true,
+      transition: "slide",
+      plugins: [RevealNotes]
+    });
+  </script>
+</body>
+</html>
