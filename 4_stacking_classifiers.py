@@ -1,4 +1,5 @@
 from pathlib import Path
+from time import perf_counter
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -93,9 +94,12 @@ def calculate_validation_metrics(labels: list[str], true_tags, predicted_tags):
         "matrix": matrix,
         "accuracy": accuracy_score(true_tags, predicted_tags),
         "precision": precision_score(true_tags, predicted_tags, labels=labels, average="macro", zero_division=0),
+        "precision_micro": precision_score(true_tags, predicted_tags, labels=labels, average="micro", zero_division=0),
         "recall": recall_score(true_tags, predicted_tags, labels=labels, average="macro", zero_division=0),
+        "recall_micro": recall_score(true_tags, predicted_tags, labels=labels, average="micro", zero_division=0),
         "specificity": macro_specificity_score(matrix),
         "f1": f1_score(true_tags, predicted_tags, labels=labels, average="macro", zero_division=0),
+        "f1_micro": f1_score(true_tags, predicted_tags, labels=labels, average="micro", zero_division=0),
     }
 
 
@@ -121,9 +125,11 @@ def write_confusion_matrix_files(model_name: str, labels: list[str], metrics: di
     metrics_text = (
         f"Accuracy: {metrics['accuracy']:.4f} | Precision (macro): {metrics['precision']:.4f} | "
         f"Recall (macro): {metrics['recall']:.4f}\n"
-        f"Specificity (macro): {metrics['specificity']:.4f} | F1 (macro): {metrics['f1']:.4f}"
+        f"Specificity (macro): {metrics['specificity']:.4f} | F1 (macro): {metrics['f1']:.4f}\n"
+        f"Micro P/R/F1: {metrics['precision_micro']:.4f} / {metrics['recall_micro']:.4f} / {metrics['f1_micro']:.4f} | "
+        f"Train time: {metrics['train_seconds']:.2f}s"
     )
-    figure.tight_layout(rect=(0, 0.07, 1, 1))
+    figure.tight_layout(rect=(0, 0.11, 1, 1))
     figure.text(
         0.5,
         0.015,
@@ -246,10 +252,10 @@ def run_stacking_predictions():
     full_models = build_ensemble_models(results)
 
     for ensemble_name, validation_model in validation_models.items():
-        validation_codes, validation_probabilities = predict_with_confidence(
-            validation_model.fit(train_features, train_target),
-            validation_features,
-        )
+        started_at = perf_counter()
+        validation_model.fit(train_features, train_target)
+        train_seconds = perf_counter() - started_at
+        validation_codes, validation_probabilities = predict_with_confidence(validation_model, validation_features)
         validation_tags = label_encoder.inverse_transform(validation_codes.astype(int))
         true_validation_tags = label_encoder.inverse_transform(validation_target)
         validation_output = build_prediction_frame(validation_metadata, validation_tags, validation_probabilities)
@@ -257,6 +263,7 @@ def run_stacking_predictions():
         validation_output.to_csv(validation_output_path, index=False)
 
         validation_metrics = calculate_validation_metrics(labels, true_validation_tags, validation_tags)
+        validation_metrics["train_seconds"] = train_seconds
         matrix_csv_path, matrix_plot_path = write_confusion_matrix_files(ensemble_name, labels, validation_metrics)
 
         full_model = full_models[ensemble_name]
@@ -268,9 +275,13 @@ def run_stacking_predictions():
 
         print(f"\n{ensemble_name} validation accuracy: {validation_metrics['accuracy']:.4f}")
         print(f"{ensemble_name} validation macro precision: {validation_metrics['precision']:.4f}")
+        print(f"{ensemble_name} validation micro precision: {validation_metrics['precision_micro']:.4f}")
         print(f"{ensemble_name} validation macro recall: {validation_metrics['recall']:.4f}")
+        print(f"{ensemble_name} validation micro recall: {validation_metrics['recall_micro']:.4f}")
         print(f"{ensemble_name} validation macro specificity: {validation_metrics['specificity']:.4f}")
         print(f"{ensemble_name} validation macro F1: {validation_metrics['f1']:.4f}")
+        print(f"{ensemble_name} validation micro F1: {validation_metrics['f1_micro']:.4f}")
+        print(f"{ensemble_name} train time: {validation_metrics['train_seconds']:.2f}s")
         print(f"Validation predictions written to {validation_output_path}")
         print(f"Validation confusion matrix written to {matrix_csv_path}")
         print(f"Validation confusion matrix plot written to {matrix_plot_path}")

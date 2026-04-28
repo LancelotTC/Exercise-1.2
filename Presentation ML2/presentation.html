@@ -31,6 +31,20 @@
       font-family: "Inter", sans-serif;
     }
 
+    .reveal .slides section {
+      box-sizing: border-box;
+      padding-top: 10px;
+      padding-bottom: 40px;
+    }
+
+    .reveal .slide-number {
+      top: 14px;
+      bottom: auto;
+      right: 22px;
+      left: auto;
+      font-size: 18px;
+    }
+
     .reveal h1,
     .reveal h2,
     .reveal h3,
@@ -235,7 +249,7 @@
         </div>
 
         <p style="font-size: 1.35rem; color: var(--text-muted); max-width: 80%; margin: 0 auto 25px auto;">
-          A fact-checked overview of the current code pipeline and the latest saved evaluation artifacts for predicting one of 20 Stack Overflow tags from short posts.
+          Current pipeline and saved results for predicting one of 20 Stack Overflow tags from short posts.
         </p>
 
         <div style="margin-top: 20px; font-size: 1.35rem; color: #f8fafc; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 15px; display: inline-block; background: rgba(0,0,0,0.2);">
@@ -307,7 +321,7 @@
               <div class="pipeline-number" style="width: 44px; height: 44px; font-size: 1.2rem; margin-right: 0;">2</div>
               <div>
                 <h3 style="font-size: 1.18rem; color: #38bdf8; margin: 0 0 6px 0;">Hyperparameter Search</h3>
-                <p style="font-size: 0.95rem; margin: 0; color: var(--text-muted);"><code>2_find_best_hyperparameters.py</code><br><strong>BayesSearchCV</strong> with stratified CV and macro F1 scoring; active search spaces are currently LR and Decision Tree.</p>
+                <p style="font-size: 0.95rem; margin: 0; color: var(--text-muted);"><code>2_find_best_hyperparameters.py</code><br><strong>BayesSearchCV</strong> with macro F1 scoring to find good settings for the models.</p>
               </div>
             </div>
 
@@ -455,76 +469,104 @@
       </section>
 
       <section data-transition="slide">
-        <h2>Current Model State</h2>
+        <h2>Base Models and Split</h2>
         <div class="card-grid container-large" style="margin-top: 30px;">
           <div class="glass-card">
-            <h3 style="font-size: 1.55rem; color: var(--primary-accent); margin-bottom: 15px;">Code Support</h3>
-            <p style="font-size: 1.1rem;">The prediction scripts currently support these individual models:</p>
+            <h3 style="font-size: 1.55rem; color: var(--primary-accent); margin-bottom: 15px;">Base Models</h3>
+            <p style="font-size: 1.1rem;">The project compares three individual models:</p>
             <ul style="font-size: 1.08rem;">
-              <li><strong>Logistic Regression</strong> for a linear probability baseline.</li>
-              <li><strong>Decision Tree</strong> for non-linear rule-style boundaries.</li>
-              <li><strong>XGBoost</strong> for boosted tree performance.</li>
+              <li><strong>Logistic Regression</strong></li>
+              <li><strong>Decision Tree</strong></li>
+              <li><strong>XGBoost</strong></li>
             </ul>
           </div>
           <div class="glass-card">
-            <h3 style="font-size: 1.55rem; color: var(--secondary-accent); margin-bottom: 15px;">What Is Actually Current</h3>
+            <h3 style="font-size: 1.55rem; color: var(--secondary-accent); margin-bottom: 15px;">Train / Validation Split</h3>
             <p style="font-size: 1.1rem;">
-              The search code uses <span class="highlight-text">BayesSearchCV</span> with macro F1 scoring and stratified cross-validation, and its active search spaces currently cover Logistic Regression and Decision Tree.<br><br>
-              However, the current vector file has <strong>664</strong> columns, while the saved <code>hyperparameters.json</code> results were produced on an older <strong>662</strong>-feature schema, so they are no longer compatible with the current vectors.
+              <strong>95%</strong> train and <strong>5%</strong> validation.<br><br>
+              That means <strong>38,000</strong> posts for training and <strong>2,000</strong> posts for validation.<br><br>
+              The saved model results shown later use this split.
             </p>
           </div>
         </div>
 
         <aside class="notes">
-          [Lancelot]: The codebase still supports three individual models. <br><br>
-          [Lancelot]: The active search step currently covers Logistic Regression and Decision Tree. But after the latest feature-schema change, the saved hyperparameter results are stale and a fresh tuning run is needed.
+          [Lancelot]: We compare three base models: Logistic Regression, Decision Tree, and XGBoost. <br><br>
+          [Lancelot]: For evaluation, we use a simple 95 percent train split and 5 percent validation split, which gives 38,000 training posts and 2,000 validation posts.
         </aside>
       </section>
 
       <section data-transition="slide">
-        <h2>Current Ensemble State</h2>
+        <h2>Best Saved Hyperparameters</h2>
         <div class="glass-card container-large">
-          <p style="font-size: 1.25rem; margin-bottom: 30px;">The ensemble code is current, but the saved ensemble outputs are archived artifacts from the previous 662-feature run.</p>
+          <p style="font-size: 1.2rem; margin-bottom: 26px;">Best settings from the latest saved run:</p>
           <div class="card-grid-3">
             <div>
-              <h4 style="font-size: 1.25rem; color: #38bdf8;">Implemented Variants</h4>
-              <p style="font-size: 1.06rem; margin-top: 10px;">The current code supports <code>StackingClassifier</code>, <code>StackingClassifierPassthrough</code>, <code>SoftVotingClassifier</code>, and <code>HardVotingClassifier</code>.</p>
+              <h4 style="font-size: 1.25rem; color: #38bdf8;">Logistic Regression</h4>
+              <p style="font-size: 0.95rem; margin-top: 10px; line-height: 1.55;">
+                <code>C = 1.560995</code><br>
+                <code>class_weight = None</code><br>
+                <code>fit_intercept = True</code><br>
+                <code>tol = 1e-6</code>
+              </p>
             </div>
             <div>
-              <h4 style="font-size: 1.25rem; color: #4ade80;">Latest Saved Artifact</h4>
-              <p style="font-size: 1.06rem; margin-top: 10px;">The saved ensemble artifact in <code>predictions/</code> is a <span class="highlight-text">StackingClassifier</span> using a Logistic Regression meta-estimator on base-model probabilities.</p>
+              <h4 style="font-size: 1.25rem; color: #4ade80;">Decision Tree</h4>
+              <p style="font-size: 0.86rem; margin-top: 10px; line-height: 1.5;">
+                <code>criterion = gini</code><br>
+                <code>splitter = best</code><br>
+                <code>max_depth = 80</code><br>
+                <code>max_features = 0.75</code><br>
+                <code>max_leaf_nodes = None</code><br>
+                <code>min_samples_split = 8</code><br>
+                <code>min_samples_leaf = 1</code><br>
+                <code>min_weight_fraction_leaf = 0.001</code><br>
+                <code>min_impurity_decrease = 1e-8</code><br>
+                <code>ccp_alpha = 1e-12</code>
+              </p>
             </div>
             <div>
-              <h4 style="font-size: 1.25rem; color: #f472b6;">Leakage Control</h4>
-              <p style="font-size: 1.06rem; margin-top: 10px;">The stacking process uses an internal 3-fold stratified cross-validation on the training split before evaluation on the external 5% holdout.</p>
+              <h4 style="font-size: 1.25rem; color: #f472b6;">XGBoost</h4>
+              <p style="font-size: 0.86rem; margin-top: 10px; line-height: 1.5;">
+                <code>n_estimators = 2000</code><br>
+                <code>learning_rate = 0.007118</code><br>
+                <code>max_depth = 14</code><br>
+                <code>min_child_weight = 21</code><br>
+                <code>subsample = 0.753454</code><br>
+                <code>colsample_bytree = 0.587073</code><br>
+                <code>gamma = 0.010115</code><br>
+                <code>grow_policy = lossguide</code><br>
+                <code>reg_alpha = 0.074826</code><br>
+                <code>reg_lambda = 0.033290</code>
+              </p>
             </div>
           </div>
         </div>
 
         <aside class="notes">
-          [Lancelot]: The ensemble layer still supports four variants in code. <br><br>
-          [Lancelot]: But the result files we still have are archived outputs from the previous vector schema, with StackingClassifier being the saved ensemble artifact.
+          [Ahmed]: These are the best saved hyperparameters for the three base models. <br><br>
+          [Ahmed]: This slide shows the saved settings for each model in a compact way.
         </aside>
       </section>
 
       <section data-transition="convex">
-        <h2>Latest Saved Validation Results</h2>
-        <p style="margin-bottom: 30px;">These metrics come from the latest saved <strong>StackingClassifier</strong> validation artifact on a 2,000-row holdout from the previous 662-feature run.</p>
+        <h2>Stacking Model</h2>
+        <p style="margin-bottom: 30px;">Best saved model: <strong>StackingClassifierPassthrough</strong>. It combines the three base models and keeps the original input features.</p>
 
         <div class="card-grid container-large" style="max-width: 1000px;">
           <div class="glass-card" style="text-align: center; padding: 50px 20px;">
-            <div class="big-number">82.85%</div>
+            <div class="big-number">83.20%</div>
             <div class="metric-label">Validation Accuracy</div>
           </div>
           <div class="glass-card" style="text-align: center; padding: 50px 20px;">
-            <div class="big-number">82.92%</div>
+            <div class="big-number">83.24%</div>
             <div class="metric-label">Macro F1-Score</div>
           </div>
         </div>
 
         <aside class="notes">
-          [Ahmed]: These are the latest saved validation metrics we currently have on disk. <br><br>
-          [Ahmed]: They come from the previous full run, before the feature table was expanded from 662 to 664 columns.
+          [Ahmed]: The best saved model is now StackingClassifierPassthrough. <br><br>
+          [Ahmed]: On the 2,000 validation posts, it gives 83.20 percent accuracy and 83.24 percent macro F1.
         </aside>
       </section>
 
@@ -535,13 +577,13 @@
             <img src="images/model_results_comparison.png" alt="Model Results Comparison" style="max-height: 500px; margin: 0; box-shadow: none;">
           </div>
           <p style="font-size: 1.22rem; margin-top: 15px;">
-            In the latest saved artifacts, the ranking is <strong>StackingClassifier</strong> (82.85% accuracy), <strong>XGBoost</strong> (82.10%), <strong>Logistic Regression</strong> (81.85%), then <strong>Decision Tree</strong> (72.15%).
+            In the saved results, the ranking is <strong>StackingClassifierPassthrough</strong> (83.20% accuracy), <strong>StackingClassifier</strong> (82.85%), <strong>XGBoost</strong> (82.10%), <strong>Logistic Regression</strong> (81.85%), then <strong>Decision Tree</strong> (72.15%).
           </p>
         </div>
 
         <aside class="notes">
-          [Ahmed]: This chart summarizes the latest saved model outputs, not a rerun on the new 664-feature vectors. <br><br>
-          [Ahmed]: Within those archived artifacts, the stacking ensemble still outperforms the individual models.
+          [Ahmed]: This chart compares the saved validation results of the individual models and the stacking model. <br><br>
+          [Ahmed]: The passthrough stacking version is the best, then standard stacking, then XGBoost, then Logistic Regression, then Decision Tree.
         </aside>
       </section>
 
@@ -549,13 +591,13 @@
         <h2>Latest Saved Stacking Confusion Matrix</h2>
         <div class="glass-card container-large" style="text-align: center; padding: 15px;">
           <div style="background: white; border-radius: 12px; display: inline-block; padding: 10px;">
-            <img src="images/stacking_confusion_matrix.png" alt="Stacking Confusion Matrix" style="max-height: 550px; margin: 0; box-shadow: none;">
+            <img src="images/stacking_passthrough_confusion_matrix.png" alt="Stacking Passthrough Confusion Matrix" style="max-height: 550px; margin: 0; box-shadow: none;">
           </div>
         </div>
 
         <aside class="notes">
-          [Ahmed]: This confusion matrix is also from the latest saved stacking run. <br><br>
-          [Ahmed]: It remains useful for discussing class confusions, but it should not be described as a rerun on the newest 664-feature schema.
+          [Ahmed]: This is the confusion matrix of the saved passthrough stacking model. <br><br>
+          [Ahmed]: The strong diagonal shows that most classes are predicted correctly.
         </aside>
       </section>
 
@@ -565,22 +607,13 @@
           <h3 style="font-size: 2rem; margin-bottom: 30px; color: var(--primary-accent);">Synergy Is Key</h3>
           <p style="font-size: 1.35rem; line-height: 1.75;">
             The current project state confirms that naive tag matching is too noisy for this dataset, especially on overlapping tags such as C, HTML, CSS, and framework names.<br><br>
-            <span class="highlight-text">Combining handcrafted regex features, exclusive words, phrase counts, TF-IDF vectorization, Bayesian tuning, and stacking</span> produced <strong>82.85% validation accuracy</strong> and <strong>0.829 macro F1</strong> in the latest saved full run, while the current 664-feature pipeline still needs a fresh end-to-end rerun.
+            <span class="highlight-text">Combining handcrafted regex features, exclusive words, phrase counts, TF-IDF, tuned models, and stacking</span> gave the best saved result: <strong>83.20% validation accuracy</strong> and <strong>0.832 macro F1</strong>.
           </p>
         </div>
 
         <aside class="notes">
-          [Ahmed & Lancelot]: The key lesson remains the same: the best saved result came from combining explicit handcrafted signals with statistical text features and an ensemble layer. <br><br>
-          [Ahmed & Lancelot]: But to be fully current, the updated 664-feature pipeline now needs a fresh tuning and evaluation run.
-        </aside>
-      </section>
-
-      <section data-transition="fade">
-        <h1 style="font-size: 5rem;">Thank You</h1>
-        <p style="font-size: 1.5rem; color: var(--text-muted);">Questions & Discussion</p>
-
-        <aside class="notes">
-          [End of Presentation]
+          [Ahmed & Lancelot]: The main lesson is simple: using both manual features and TF-IDF works better than using only one idea. <br><br>
+          [Ahmed & Lancelot]: The best saved result comes from the passthrough stacking version.
         </aside>
       </section>
 
@@ -599,7 +632,8 @@
       hash: true,
       controls: true,
       progress: true,
-      center: true,
+      slideNumber: true,
+      center: false,
       transition: "slide",
       plugins: [RevealNotes]
     });

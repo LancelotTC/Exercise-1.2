@@ -1,4 +1,5 @@
 from pathlib import Path
+from time import perf_counter
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -37,7 +38,7 @@ from utils import (
 SUPPORTED_MODEL_NAMES = (
     "LogisticRegression",
     "DecisionTreeClassifier",
-    "XGBClassifier",
+    # "XGBClassifier",
 )
 
 
@@ -95,9 +96,12 @@ def calculate_validation_metrics(labels: list[str], true_tags, predicted_tags):
         "matrix": matrix,
         "accuracy": accuracy_score(true_tags, predicted_tags),
         "precision": precision_score(true_tags, predicted_tags, labels=labels, average="macro", zero_division=0),
+        "precision_micro": precision_score(true_tags, predicted_tags, labels=labels, average="micro", zero_division=0),
         "recall": recall_score(true_tags, predicted_tags, labels=labels, average="macro", zero_division=0),
+        "recall_micro": recall_score(true_tags, predicted_tags, labels=labels, average="micro", zero_division=0),
         "specificity": macro_specificity_score(matrix),
         "f1": f1_score(true_tags, predicted_tags, labels=labels, average="macro", zero_division=0),
+        "f1_micro": f1_score(true_tags, predicted_tags, labels=labels, average="micro", zero_division=0),
     }
 
 
@@ -123,9 +127,11 @@ def write_confusion_matrix_files(model_name: str, labels: list[str], metrics: di
     metrics_text = (
         f"Accuracy: {metrics['accuracy']:.4f} | Precision (macro): {metrics['precision']:.4f} | "
         f"Recall (macro): {metrics['recall']:.4f}\n"
-        f"Specificity (macro): {metrics['specificity']:.4f} | F1 (macro): {metrics['f1']:.4f}"
+        f"Specificity (macro): {metrics['specificity']:.4f} | F1 (macro): {metrics['f1']:.4f}\n"
+        f"Micro P/R/F1: {metrics['precision_micro']:.4f} / {metrics['recall_micro']:.4f} / {metrics['f1_micro']:.4f} | "
+        f"Train time: {metrics['train_seconds']:.2f}s"
     )
-    figure.tight_layout(rect=(0, 0.07, 1, 1))
+    figure.tight_layout(rect=(0, 0.11, 1, 1))
     figure.text(
         0.5,
         0.015,
@@ -151,16 +157,19 @@ def predict_with_confidence(model, features):
 
 
 def fit_and_predict(model_name: str, model, train_features, train_target, predict_features):
+    started_at = perf_counter()
+
     if model_name != "XGBClassifier":
         model.fit(train_features, train_target)
-        return predict_with_confidence(model, predict_features)
+        predicted_tags, predicted_probabilities = predict_with_confidence(model, predict_features)
+        return predicted_tags, predicted_probabilities, perf_counter() - started_at
 
     encoder = LabelEncoder()
     encoded_target = encoder.fit_transform(train_target)
     model.fit(train_features, encoded_target)
     predicted_probabilities = model.predict_proba(predict_features).max(axis=1)
     predicted_tags = encoder.inverse_transform(model.predict(predict_features).astype(int))
-    return predicted_tags, predicted_probabilities
+    return predicted_tags, predicted_probabilities, perf_counter() - started_at
 
 
 def load_compatible_results(feature_columns):
@@ -240,7 +249,7 @@ def run_individual_predictions():
 
     for model_name, result in results.items():
         model = build_model(model_name, result["best_params"])
-        validation_tags, validation_probabilities = fit_and_predict(
+        validation_tags, validation_probabilities, train_seconds = fit_and_predict(
             model_name,
             model,
             train_features,
@@ -253,19 +262,24 @@ def run_individual_predictions():
         validation_output.to_csv(validation_output_path, index=False)
 
         validation_metrics = calculate_validation_metrics(labels, validation_target, validation_tags)
+        validation_metrics["train_seconds"] = train_seconds
         matrix_csv_path, matrix_plot_path = write_confusion_matrix_files(model_name, labels, validation_metrics)
 
         full_model = build_model(model_name, result["best_params"])
-        all_tags, all_probabilities = fit_and_predict(model_name, full_model, features, target, features)
+        all_tags, all_probabilities, _ = fit_and_predict(model_name, full_model, features, target, features)
         all_output = build_prediction_frame(metadata, all_tags, all_probabilities)
         all_output_path = prediction_output_path(model_name, f"{model_name}_all_rows_preds.csv")
         all_output.to_csv(all_output_path, index=False)
 
         print(f"{model_name} validation accuracy: {validation_metrics['accuracy']:.4f}")
         print(f"{model_name} validation macro precision: {validation_metrics['precision']:.4f}")
+        print(f"{model_name} validation micro precision: {validation_metrics['precision_micro']:.4f}")
         print(f"{model_name} validation macro recall: {validation_metrics['recall']:.4f}")
+        print(f"{model_name} validation micro recall: {validation_metrics['recall_micro']:.4f}")
         print(f"{model_name} validation macro specificity: {validation_metrics['specificity']:.4f}")
         print(f"{model_name} validation macro F1: {validation_metrics['f1']:.4f}")
+        print(f"{model_name} validation micro F1: {validation_metrics['f1_micro']:.4f}")
+        print(f"{model_name} train time: {validation_metrics['train_seconds']:.2f}s")
         print(f"Validation predictions written to {validation_output_path}")
         print(f"Validation confusion matrix written to {matrix_csv_path}")
         print(f"Validation confusion matrix plot written to {matrix_plot_path}")
